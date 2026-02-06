@@ -1,0 +1,1 @@
+"""Agents package for the AI Job Application Coach."""
