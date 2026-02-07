@@ -20,6 +20,7 @@ uvicorn[standard]==0.24.0
 
 # Async Processing
 celery==5.3.4
+redis==5.0.1
 
 # External APIs
 requests==2.31.0

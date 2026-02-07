@@ -1,0 +1,57 @@
+# Git
+.git
+.gitignore
+
+# Virtual environments
+.venv
+venv/
+env/
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Application specific
+chroma/
+*.db
+*.sqlite
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Documentation
+README.md
+docs/
+.env.example
+.env.docker
+
+# Scripts and tools
+run.bat
+docker-setup.sh
+docker-setup.bat
+
+# Tests and evaluation
+tests/
+evaluation/
+
+# Temporary files
+*.log
+tmp/
+temp/

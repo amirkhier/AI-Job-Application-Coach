@@ -11,8 +11,45 @@
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Option 1: Docker Setup (Recommended) 🐳
 
+**Prerequisites:**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) installed and running
+- OpenAI API key
+
+**Easy Setup:**
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd AI-Job-Application-Coach
+
+# Copy environment template and add your OpenAI API key
+cp .env.docker .env
+# Edit .env and replace 'your_openai_api_key_here' with your actual API key
+
+# Start all services with one command
+./docker-setup.sh          # Linux/macOS
+# OR
+docker-setup.bat           # Windows
+```
+
+**What Docker provides:**
+- ✅ **No MySQL installation needed** - MySQL 8.0 in container
+- ✅ **No Redis setup required** - Redis for Celery (future use)
+- ✅ **ChromaDB included** - Vector database for RAG
+- ✅ **Automatic service orchestration** - All dependencies managed
+- ✅ **Health checks** - Ensures all services are ready
+- ✅ **Data persistence** - Database and vector data preserved
+
+**Access your application:**
+- 🚀 **Main API**: http://localhost:8000
+- 📚 **Interactive Docs**: http://localhost:8000/docs  
+- 🔍 **Health Check**: http://localhost:8000/health
+- 📊 **ChromaDB**: http://localhost:8001
+
+### Option 2: Manual Setup
+
+**Prerequisites:**
 - Python 3.9 or higher
 - MySQL Server (local or cloud)
 - OpenAI API key
@@ -67,6 +104,46 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Visit `http://localhost:8000/docs` to see the interactive API documentation.
+
+---
+
+## 🐳 Docker Management
+
+### Basic Commands
+```bash
+# Start all services
+docker-compose up -d
+
+# Stop all services  
+docker-compose down
+
+# View logs
+docker-compose logs -f app
+
+# Restart application
+docker-compose restart app
+
+# Database shell access
+docker-compose exec mysql mysql -u jobcoach -p job_coach
+
+# Application shell access
+docker-compose exec app bash
+```
+
+### Development with Docker
+```bash
+# Start with file watching (development)
+docker-compose up --build
+
+# Start only specific services
+docker-compose up -d mysql redis chromadb
+
+# View service status
+docker-compose ps
+
+# Clean up everything (including volumes)
+docker-compose down -v
+```
 
 ---
 
@@ -199,10 +276,11 @@ curl -X POST http://localhost:8000/ask \
 
 - **Framework**: LangChain, LangGraph
 - **API**: FastAPI, Uvicorn
-- **Database**: MySQL 
+- **Database**: MySQL 8.0 
 - **Vector DB**: ChromaDB
 - **LLM**: OpenAI GPT-4o-mini
-- **Async**: Celery + RabbitMQ (planned)
+- **Cache/Queue**: Redis (for Celery)
+- **Containers**: Docker, Docker Compose
 - **Testing**: pytest
 
 ---
@@ -233,22 +311,75 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Troubleshooting
 
-### Common Issues
+### Docker Issues
+
+**Docker not starting:**
+- Ensure Docker Desktop is installed and running
+- On Windows, enable WSL 2 backend
+- Check Docker has sufficient memory allocated (4GB+ recommended)
+
+**Services not connecting:**
+```bash
+# Check service health
+docker-compose ps
+
+# View service logs
+docker-compose logs mysql
+docker-compose logs app
+
+# Restart problematic service
+docker-compose restart mysql
+```
+
+**Port conflicts:**
+```bash
+# If ports 8000, 3306, 6379, or 8001 are busy
+# Stop conflicting services or modify ports in docker-compose.yml
+netstat -tulpn | grep :8000  # Linux
+netstat -an | findstr :8000  # Windows
+```
+
+### Manual Setup Issues
 
 **Database Connection Error**
 - Ensure MySQL server is running
 - Verify credentials in `.env` file
 - Check if `job_coach` database exists
+- Test connection: `mysql -u jobcoach -p -h localhost job_coach`
 
 **OpenAI API Error** 
 - Verify API key is set correctly in `.env`
 - Check API key has sufficient credits
 - Ensure network connectivity
+- Test: `curl -H "Authorization: Bearer $OPENAI_API_KEY" https://api.openai.com/v1/models`
 
 **Import Errors**
 - Verify virtual environment is activated
 - Reinstall dependencies: `pip install -r requirements.txt`
-- Check Python version is 3.9+
+- Check Python version is 3.9+: `python --version`
+
+**ChromaDB Issues**
+- Ensure ChromaDB directory has write permissions
+- Clear ChromaDB data: `rm -rf chroma/` (will lose vector data)
+- For Docker: `docker-compose down -v` to reset volumes
+
+### Performance Issues
+
+**Slow API responses:**
+- Check database connection pool settings
+- Monitor Docker container resources: `docker stats`
+- Increase Docker memory allocation
+- Use `docker-compose logs -f app` to check for bottlenecks
+
+**Memory usage:**
+```bash
+# Monitor container memory
+docker stats --no-stream
+
+# Check system resources
+free -h    # Linux
+wmic OS get TotalVisibleMemorySize,FreePhysicalMemory /format:table  # Windows
+```
 
 ### Getting Help
 

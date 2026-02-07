@@ -1,0 +1,159 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: job_coach_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: job_coach
+      MYSQL_USER: jobcoach
+      MYSQL_PASSWORD: jobcoach123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/setup_db.sql:/docker-entrypoint-initdb.d/setup_db.sql
+    networks:
+      - job_coach_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Redis (for Celery - future use)
+  redis:
+    image: redis:7-alpine
+    container_name: job_coach_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - job_coach_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ChromaDB (Vector Database)
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: job_coach_chromadb
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+      - ANONYMIZED_TELEMETRY=TRUE
+    networks:
+      - job_coach_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Main Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: job_coach_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Database Configuration
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: jobcoach
+      MYSQL_PASSWORD: jobcoach123
+      MYSQL_DATABASE: job_coach
+      
+      # Redis Configuration (for future Celery use)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      
+      # ChromaDB Configuration
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      CHROMA_PERSIST_DIRECTORY: /app/chroma
+      
+      # Application Configuration
+      DEBUG: "true"
+      LOG_LEVEL: INFO
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      
+      # OpenAI Configuration (to be set by user)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-your_openai_api_key_here}
+      
+    volumes:
+      - ./app:/app/app:ro
+      - chromadb_data:/app/chroma
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    networks:
+      - job_coach_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Worker (for async tasks - future use)
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: job_coach_celery
+    restart: unless-stopped
+    command: celery -A app.celery_worker worker --loglevel=info
+    environment:
+      # Same environment as main app
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: jobcoach
+      MYSQL_PASSWORD: jobcoach123
+      MYSQL_DATABASE: job_coach
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-your_openai_api_key_here}
+    volumes:
+      - ./app:/app/app:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    networks:
+      - job_coach_network
+    profiles:
+      - celery  # Only start with --profile celery
+
+networks:
+  job_coach_network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  chromadb_data:
+    driver: local
