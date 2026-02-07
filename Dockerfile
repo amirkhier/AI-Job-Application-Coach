@@ -9,12 +9,15 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
-# Install system dependencies
+# Install system dependencies including C++ compiler
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         gcc \
+        g++ \
         default-libmysqlclient-dev \
         pkg-config \
+        build-essential \
+        curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching

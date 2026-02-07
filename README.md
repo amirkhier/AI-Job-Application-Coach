@@ -45,7 +45,9 @@ docker-setup.bat           # Windows
 - 🚀 **Main API**: http://localhost:8000
 - 📚 **Interactive Docs**: http://localhost:8000/docs  
 - 🔍 **Health Check**: http://localhost:8000/health
+- �️ **MySQL Database**: localhost:3307 (external port to avoid conflicts)
 - 📊 **ChromaDB**: http://localhost:8001
+- 💾 **Redis**: localhost:6380 (external port to avoid conflicts)
 
 ### Option 2: Manual Setup
 

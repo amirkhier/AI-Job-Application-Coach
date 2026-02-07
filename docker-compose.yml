@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # MySQL Database
   mysql:
@@ -12,7 +10,7 @@ services:
       MYSQL_USER: jobcoach
       MYSQL_PASSWORD: jobcoach123
     ports:
-      - "3306:3306"
+      - "3307:3306"  # Changed to avoid conflict with existing MySQL
     volumes:
       - mysql_data:/var/lib/mysql
       - ./scripts/setup_db.sql:/docker-entrypoint-initdb.d/setup_db.sql
@@ -29,7 +27,7 @@ services:
     container_name: job_coach_redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6380:6379"  # Changed to avoid conflict with existing Redis
     networks:
       - job_coach_network
     healthcheck:
@@ -54,7 +52,7 @@ services:
     networks:
       - job_coach_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/version"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -103,8 +101,6 @@ services:
       mysql:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      chromadb:
         condition: service_healthy
     networks:
       - job_coach_network

@@ -126,9 +126,9 @@ echo Available Services:
 echo 🚀 Main Application: http://localhost:8000
 echo 📚 API Documentation: http://localhost:8000/docs
 echo 🔍 Health Check: http://localhost:8000/health
-echo 🗄️  MySQL Database: localhost:3306
+echo 🗄️  MySQL Database: localhost:3307 (external port)
 echo 📊 ChromaDB: http://localhost:8001
-echo 💾 Redis: localhost:6379
+echo 💾 Redis: localhost:6380 (external port)
 
 echo.
 echo Useful Commands:

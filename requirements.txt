@@ -8,8 +8,8 @@ langgraph>=0.0.20
 openai==1.31.1
 tiktoken==0.7.0
 
-# Vector Database
-chromadb==0.5.0
+# Vector Database - using more stable version
+chromadb==0.4.24
 
 # Database
 mysql-connector-python==8.0.33
