@@ -19,11 +19,15 @@ from app.agents.interview import InterviewAgent
 from app.agents.knowledge import KnowledgeAgent
 from app.agents.memory import MemoryAgent
 from app.agents.job_search import JobSearchAgent
+from app.graph.workflow import JobCoachWorkflow
 
 import json
 import logging
 
 logger = logging.getLogger(__name__)
+
+# ── Feature flag ──────────────────────────────────────────────────────────
+USE_LANGGRAPH = os.getenv("USE_LANGGRAPH", "false").lower() == "true"
 
 # Pydantic models for request/response
 class HealthResponse(BaseModel):
@@ -211,6 +215,40 @@ class ConversationAnalysisResponse(BaseModel):
     conversation_count: int
     agent_usage: Dict[str, int]
 
+
+# ── Unified chat models ──────────────────────────────────────────────────
+class ChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, description="Natural-language user message")
+    user_id: int = Field(1, description="User identifier")
+    session_id: Optional[str] = Field(None, description="Optional session ID for continuity")
+    resume_text: Optional[str] = Field(None, description="Resume text when relevant")
+    job_description: Optional[str] = Field(None, description="Job description when relevant")
+    interview_role: Optional[str] = Field(None, description="Target role for interview practice")
+    interview_level: Optional[str] = Field(None, description="Experience level", pattern="^(junior|mid|senior|lead)$")
+    job_search_location: Optional[str] = Field(None, description="Location for job search")
+    # Multi-turn interview support
+    interview_session_id: Optional[str] = Field(None, description="Active interview session ID for multi-turn practice")
+    interview_answer: Optional[str] = Field(None, description="Answer to the current interview question")
+    interview_question_id: Optional[str] = Field(None, description="ID of the question being answered")
+
+
+class ChatResponse(BaseModel):
+    response: str
+    intent: str
+    confidence: float
+    agents_used: List[str]
+    session_id: str
+    processing_time: float
+    error: Optional[str] = None
+    data: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Structured data returned by the specialist agent (analysis, questions, jobs …)",
+    )
+    interview_session_id: Optional[str] = Field(
+        None,
+        description="Interview session ID — returned when an interview session is active or created.",
+    )
+
 # Application lifespan management
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -261,6 +299,20 @@ knowledge_agent = KnowledgeAgent()
 memory_agent = MemoryAgent()
 job_search_agent = JobSearchAgent()
 
+# Initialise LangGraph workflow (shares the same agent singletons)
+_workflow = JobCoachWorkflow(
+    memory_agent=memory_agent,
+    knowledge_agent=knowledge_agent,
+    resume_agent=resume_agent,
+    interview_agent=interview_agent,
+    job_search_agent=job_search_agent,
+)
+
+if USE_LANGGRAPH:
+    logger.info("LangGraph orchestration ENABLED — structured endpoints will route through the graph")
+else:
+    logger.info("LangGraph orchestration DISABLED — using direct agent calls")
+
 # Health check endpoint
 @app.get("/health", response_model=HealthResponse)
 async def health_check(db: DatabaseManager = Depends(get_database)):
@@ -286,34 +338,46 @@ async def health_check(db: DatabaseManager = Depends(get_database)):
 async def analyze_resume(request: ResumeRequest, db: DatabaseManager = Depends(get_database)):
     """Analyse a resume and return LLM-powered structured feedback."""
     try:
-        # Run real Resume Agent analysis
-        analysis = resume_agent.analyze_resume(
-            resume_text=request.resume_text,
-            job_description=request.job_description or "",
-        )
+        # ── LangGraph path ──────────────────────────────────────────
+        if USE_LANGGRAPH:
+            state = _run_graph(
+                user_query="Analyze my resume",
+                user_id=request.user_id,
+                resume_text=request.resume_text,
+                job_description=request.job_description or "",
+            )
+            analysis = state.get("resume_analysis") or {}
+        else:
+            # ── Direct agent path (legacy) ──────────────────────────
+            analysis = resume_agent.analyze_resume(
+                resume_text=request.resume_text,
+                job_description=request.job_description or "",
+            )
 
         # Persist conversation with intelligent analysis (non-fatal)
-        session_id = str(uuid.uuid4())
-        try:
-            analysis_summary = f"Resume analysis completed. Overall score: {analysis.get('overall_score')}/10"
-            memory_agent.save_conversation_with_analysis(
-                user_id=request.user_id,
-                session_id=session_id,
-                user_message=f"Analyze my resume ({len(request.resume_text)} chars)" + 
-                           (f" for {request.job_description[:100]}..." if request.job_description else ""),
-                agent_response=analysis_summary,
-                agent_type="resume",
-                intent="resume_analysis"
-            )
-            
-            # Also update profile with any insights
-            memory_agent.update_profile_from_conversation(
-                user_id=request.user_id,
-                user_message=f"Resume analysis request targeting: {request.job_description[:200] if request.job_description else 'general positions'}",
-                agent_response=analysis_summary
-            )
-        except Exception as db_err:
-            logger.warning("Memory agent save failed (non-fatal): %s", db_err)
+        # (When USE_LANGGRAPH the graph's memory_save node handles this.)
+        if not USE_LANGGRAPH:
+            session_id = str(uuid.uuid4())
+            try:
+                analysis_summary = f"Resume analysis completed. Overall score: {analysis.get('overall_score')}/10"
+                memory_agent.save_conversation_with_analysis(
+                    user_id=request.user_id,
+                    session_id=session_id,
+                    user_message=f"Analyze my resume ({len(request.resume_text)} chars)" + 
+                               (f" for {request.job_description[:100]}..." if request.job_description else ""),
+                    agent_response=analysis_summary,
+                    agent_type="resume",
+                    intent="resume_analysis"
+                )
+                
+                # Also update profile with any insights
+                memory_agent.update_profile_from_conversation(
+                    user_id=request.user_id,
+                    user_message=f"Resume analysis request targeting: {request.job_description[:200] if request.job_description else 'general positions'}",
+                    agent_response=analysis_summary
+                )
+            except Exception as db_err:
+                logger.warning("Memory agent save failed (non-fatal): %s", db_err)
 
         # Map agent dict → Pydantic response models
         ats_raw = analysis.get("ats_compatibility", {})
@@ -364,24 +428,37 @@ async def request_detailed_resume_audit(request: ResumeRequest, background_tasks
 async def improve_resume(request: ResumeRequest, db: DatabaseManager = Depends(get_database)):
     """Generate concrete improvement suggestions with rewritten examples."""
     try:
-        improvements = resume_agent.suggest_improvements(
-            resume_text=request.resume_text,
-            job_description=request.job_description or "",
-        )
-
-        # Persist conversation (non-fatal)
-        session_id = str(uuid.uuid4())
-        try:
-            db.save_conversation(
+        # ── LangGraph path ──────────────────────────────────────────
+        if USE_LANGGRAPH:
+            state = _run_graph(
+                user_query="Improve my resume",
                 user_id=request.user_id,
-                session_id=session_id,
-                message=f"Resume improvement request: {len(request.resume_text)} characters",
-                intent="resume_improvement",
-                agent_used="resume",
-                metadata={"job_description_provided": bool(request.job_description)},
+                resume_text=request.resume_text,
+                job_description=request.job_description or "",
             )
-        except Exception as db_err:
-            logger.warning("Failed to save conversation: %s", db_err)
+            # The graph's resume node stores suggestions under resume_suggestions
+            improvements = state.get("resume_suggestions") or {}
+        else:
+            # ── Direct agent path (legacy) ──────────────────────────
+            improvements = resume_agent.suggest_improvements(
+                resume_text=request.resume_text,
+                job_description=request.job_description or "",
+            )
+
+        # Persist conversation (non-fatal) — skipped when graph handles it
+        if not USE_LANGGRAPH:
+            session_id = str(uuid.uuid4())
+            try:
+                db.save_conversation(
+                    user_id=request.user_id,
+                    session_id=session_id,
+                    message=f"Resume improvement request: {len(request.resume_text)} characters",
+                    intent="resume_improvement",
+                    agent_used="resume",
+                    metadata={"job_description_provided": bool(request.job_description)},
+                )
+            except Exception as db_err:
+                logger.warning("Failed to save conversation: %s", db_err)
 
         return ResumeImprovementResponse(
             improved_summary=improvements.get("improved_summary", ""),
@@ -417,12 +494,22 @@ async def start_interview_session(request: InterviewStartRequest, db: DatabaseMa
         except Exception as db_err:
             logger.warning("Failed to create interview session in DB: %s", db_err)
 
-        # Generate all questions up-front via the Interview Agent
-        questions = interview_agent.generate_questions(
-            role=request.role,
-            level=request.level,
-            count=request.question_count,
-        )
+        # Generate all questions up-front
+        if USE_LANGGRAPH:
+            state = _run_graph(
+                user_query=f"Generate interview questions for {request.role}",
+                user_id=request.user_id,
+                interview_role=request.role,
+                interview_level=request.level,
+                interview_session_id=session_id,
+            )
+            questions = state.get("interview_questions", [])
+        else:
+            questions = interview_agent.generate_questions(
+                role=request.role,
+                level=request.level,
+                count=request.question_count,
+            )
 
         # Persist questions in the session row
         try:
@@ -472,13 +559,28 @@ async def submit_interview_answer(request: InterviewAnswerRequest, db: DatabaseM
         if not current_q:
             raise HTTPException(status_code=404, detail=f"Question {request.question_id} not found in session")
 
-        # ---- Evaluate answer via Interview Agent -------------------------
-        evaluation = interview_agent.evaluate_answer(
-            question=current_q,
-            answer=request.answer,
-            role=role,
-            level=level,
-        )
+        # ---- Evaluate answer -----------------------------------------
+        if USE_LANGGRAPH:
+            state = _run_graph(
+                user_query=f"Evaluate my interview answer for {role}",
+                user_id=session.get("user_id", 1),
+                interview_role=role,
+                interview_level=level,
+                interview_session_id=request.session_id,
+                interview_questions=questions,
+                interview_answers=[{
+                    "question_id": request.question_id,
+                    "answer": request.answer,
+                }],
+            )
+            evaluation = state.get("interview_feedback") or {}
+        else:
+            evaluation = interview_agent.evaluate_answer(
+                question=current_q,
+                answer=request.answer,
+                role=role,
+                level=level,
+            )
 
         feedback = InterviewFeedback(
             overall_score=evaluation.get("overall_score", 5.0),
@@ -566,11 +668,19 @@ async def get_interview_questions(
 ):
     """Generate interview questions for a role without starting a full session."""
     try:
-        questions = interview_agent.generate_questions(
-            role=job_title,
-            level=level,
-            count=min(count, 10),
-        )
+        if USE_LANGGRAPH:
+            state = _run_graph(
+                user_query=f"Generate interview questions for {job_title}",
+                interview_role=job_title,
+                interview_level=level,
+            )
+            questions = state.get("interview_questions", [])
+        else:
+            questions = interview_agent.generate_questions(
+                role=job_title,
+                level=level,
+                count=min(count, 10),
+            )
         return {"role": job_title, "level": level, "questions": questions}
     except Exception as e:
         logger.error("Question generation endpoint failed: %s", e, exc_info=True)
@@ -582,29 +692,44 @@ async def get_interview_questions(
 async def ask_career_question(request: KnowledgeQueryRequest, db: DatabaseManager = Depends(get_database)):
     """Ask career-related questions and get RAG-powered advice from the knowledge base."""
     try:
-        # Run RAG-powered Knowledge Agent
-        result = knowledge_agent.answer_question(request.query)
+        # ── LangGraph path ──────────────────────────────────────────
+        if USE_LANGGRAPH:
+            state = _run_graph(
+                user_query=request.query,
+                user_id=request.user_id,
+                knowledge_query=request.query,
+            )
+            debug = state.get("debug_info") or {}
+            result = {
+                "answer": state.get("knowledge_answer") or state.get("response", ""),
+                "sources": state.get("knowledge_sources", []),
+                "relevance_score": debug.get("relevance_score", 0.0),
+                "related_topics": [],
+            }
+        else:
+            # ── Direct agent path (legacy) ──────────────────────────
+            result = knowledge_agent.answer_question(request.query)
 
-        # Save conversation with intelligent analysis (non-fatal)
-        session_id = str(uuid.uuid4())
-        try:
-            memory_agent.save_conversation_with_analysis(
-                user_id=request.user_id,
-                session_id=session_id,
-                user_message=request.query,
-                agent_response=result["answer"],
-                agent_type="knowledge",
-                intent="career_advice"
-            )
-            
-            # Update profile with insights from Q&A
-            memory_agent.update_profile_from_conversation(
-                user_id=request.user_id,
-                user_message=request.query,
-                agent_response=result["answer"]
-            )
-        except Exception as db_err:
-            logger.warning("Memory agent save failed (non-fatal): %s", db_err)
+            # Save conversation with intelligent analysis (non-fatal)
+            session_id = str(uuid.uuid4())
+            try:
+                memory_agent.save_conversation_with_analysis(
+                    user_id=request.user_id,
+                    session_id=session_id,
+                    user_message=request.query,
+                    agent_response=result["answer"],
+                    agent_type="knowledge",
+                    intent="career_advice"
+                )
+                
+                # Update profile with insights from Q&A
+                memory_agent.update_profile_from_conversation(
+                    user_id=request.user_id,
+                    user_message=request.query,
+                    agent_response=result["answer"]
+                )
+            except Exception as db_err:
+                logger.warning("Memory agent save failed (non-fatal): %s", db_err)
 
         return KnowledgeQueryResponse(
             answer=result["answer"],
@@ -622,14 +747,27 @@ async def ask_career_question(request: KnowledgeQueryRequest, db: DatabaseManage
 async def search_jobs(request: JobSearchRequest, db: DatabaseManager = Depends(get_database)):
     """Search for job opportunities using geolocation + LLM-powered results."""
     try:
-        # Run the Job Search Agent
-        result = job_search_agent.search_jobs(
-            query=request.query,
-            location=request.location,
-            experience_level=request.experience_level,
-            remote_ok=request.remote_ok,
-            count=request.count,
-        )
+        # ── LangGraph path ──────────────────────────────────────────
+        if USE_LANGGRAPH:
+            state = _run_graph(
+                user_query=f"Find {request.experience_level} jobs for {request.query} in {request.location}",
+                user_id=request.user_id,
+                job_search_query=request.query,
+                job_search_location=request.location,
+                job_search_level=request.experience_level,
+            )
+            # The graph stores raw job dicts in job_results
+            raw_jobs = state.get("job_results") or []
+            result = {"jobs": raw_jobs, "processing_time": state.get("processing_time", 0.0)}
+        else:
+            # ── Direct agent path (legacy) ──────────────────────────
+            result = job_search_agent.search_jobs(
+                query=request.query,
+                location=request.location,
+                experience_level=request.experience_level,
+                remote_ok=request.remote_ok,
+                count=request.count,
+            )
 
         # Map raw dicts → Pydantic models
         job_listings = [
@@ -670,19 +808,20 @@ async def search_jobs(request: JobSearchRequest, db: DatabaseManager = Depends(g
             for c in result.get("nearby_companies", [])
         ]
 
-        # Save via Memory Agent (non-fatal)
-        session_id = str(uuid.uuid4())
-        try:
-            memory_agent.save_conversation_with_analysis(
-                user_id=request.user_id,
-                session_id=session_id,
-                user_message=f"Job search: {request.query} in {request.location} ({request.experience_level})",
-                agent_response=f"Found {len(job_listings)} positions",
-                agent_type="job_search",
-                intent="job_search"
-            )
-        except Exception as db_err:
-            logger.warning("Memory agent save failed (non-fatal): %s", db_err)
+        # Save via Memory Agent (non-fatal) — graph handles this when enabled
+        if not USE_LANGGRAPH:
+            session_id = str(uuid.uuid4())
+            try:
+                memory_agent.save_conversation_with_analysis(
+                    user_id=request.user_id,
+                    session_id=session_id,
+                    user_message=f"Job search: {request.query} in {request.location} ({request.experience_level})",
+                    agent_response=f"Found {len(job_listings)} positions",
+                    agent_type="job_search",
+                    intent="job_search"
+                )
+            except Exception as db_err:
+                logger.warning("Memory agent save failed (non-fatal): %s", db_err)
 
         return JobSearchResponse(
             jobs=job_listings,
@@ -964,6 +1103,193 @@ async def update_profile_from_conversation(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update profile: {str(e)}")
+
+
+# ── Unified chat endpoint (LangGraph-powered) ───────────────────────────
+
+def _extract_agent_data(state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Pull structured specialist data out of the finished graph state."""
+    data: Dict[str, Any] = {}
+    if state.get("resume_analysis"):
+        data["resume_analysis"] = state["resume_analysis"]
+    if state.get("resume_suggestions"):
+        data["resume_suggestions"] = state["resume_suggestions"]
+    if state.get("interview_questions"):
+        data["interview_questions"] = state["interview_questions"]
+    if state.get("interview_feedback"):
+        data["interview_feedback"] = state["interview_feedback"]
+    if state.get("job_results"):
+        data["job_results"] = state["job_results"]
+    if state.get("knowledge_answer"):
+        data["knowledge_answer"] = state["knowledge_answer"]
+        data["knowledge_sources"] = state.get("knowledge_sources", [])
+    return data or None
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest, db: DatabaseManager = Depends(get_database)):
+    """Unified natural-language interface routed through the LangGraph workflow.
+
+    This endpoint accepts a free-form message from the user, classifies the
+    intent via the router agent, delegates to the appropriate specialist, and
+    returns a synthesised response together with any structured data the
+    specialist produced.
+
+    **Multi-turn interview support**: when ``interview_session_id`` is
+    provided the handler loads the DB session, injects the question context
+    into the graph, and — when ``interview_answer`` is also present —
+    evaluates the answer and advances the session.
+    """
+    try:
+        extra_kwargs: Dict[str, Any] = {}
+        if request.resume_text:
+            extra_kwargs["resume_text"] = request.resume_text
+        if request.job_description:
+            extra_kwargs["job_description"] = request.job_description
+        if request.interview_role:
+            extra_kwargs["interview_role"] = request.interview_role
+        if request.interview_level:
+            extra_kwargs["interview_level"] = request.interview_level
+        if request.job_search_location:
+            extra_kwargs["job_search_location"] = request.job_search_location
+
+        # ── Multi-turn interview support ─────────────────────────────
+        active_session_id: Optional[str] = request.interview_session_id
+        interview_session: Optional[Dict[str, Any]] = None
+
+        if active_session_id:
+            interview_session = db.get_interview_session(active_session_id)
+            if interview_session:
+                extra_kwargs["interview_session_id"] = active_session_id
+                extra_kwargs["interview_role"] = extra_kwargs.get(
+                    "interview_role", interview_session.get("role", "Software Engineer"),
+                )
+                extra_kwargs["interview_level"] = extra_kwargs.get(
+                    "interview_level", interview_session.get("level", "mid"),
+                )
+                extra_kwargs["interview_questions"] = interview_session.get("questions", [])
+
+                if request.interview_answer and request.interview_question_id:
+                    extra_kwargs["interview_answers"] = [{
+                        "question_id": request.interview_question_id,
+                        "answer": request.interview_answer,
+                    }]
+
+        final_state = _workflow.process_query(
+            user_query=request.message,
+            user_id=request.user_id,
+            session_id=request.session_id,
+            **extra_kwargs,
+        )
+
+        # ── Post-graph: update DB interview session if applicable ────
+        if interview_session and request.interview_answer and request.interview_question_id:
+            try:
+                prev_answers: List[Dict] = interview_session.get("answers", [])
+                evaluation = final_state.get("interview_feedback") or {}
+                prev_answers.append({
+                    "question_id": request.interview_question_id,
+                    "answer": request.interview_answer,
+                    "evaluation": evaluation,
+                })
+
+                answered_ids = {a["question_id"] for a in prev_answers}
+                all_questions = interview_session.get("questions", [])
+                remaining = [q for q in all_questions if q["id"] not in answered_ids]
+                is_complete = len(remaining) == 0
+
+                session_summary = None
+                if is_complete:
+                    try:
+                        session_summary = interview_agent.generate_session_summary(
+                            questions=all_questions,
+                            answers_with_feedback=prev_answers,
+                            role=interview_session.get("role", "Software Engineer"),
+                            level=interview_session.get("level", "mid"),
+                        )
+                    except Exception as sum_err:
+                        logger.warning("Chat interview summary failed: %s", sum_err)
+
+                scores = [
+                    a["evaluation"]["overall_score"]
+                    for a in prev_answers
+                    if a.get("evaluation") and a["evaluation"].get("overall_score")
+                ]
+                avg_score = round(sum(scores) / len(scores), 2) if scores else None
+
+                db.update_interview_session(
+                    session_id=active_session_id,
+                    answers=prev_answers,
+                    feedback=session_summary if is_complete else None,
+                    score=avg_score,
+                    completed=is_complete,
+                )
+
+                # Enrich graph data with session-advancement info
+                data = _extract_agent_data(final_state) or {}
+                data["interview_session_complete"] = is_complete
+                data["interview_questions_remaining"] = len(remaining)
+                if not is_complete and remaining:
+                    data["next_question"] = remaining[0]
+                if session_summary:
+                    data["interview_session_summary"] = session_summary
+
+            except Exception as db_err:
+                logger.warning("Chat interview DB update failed (non-fatal): %s", db_err)
+                data = _extract_agent_data(final_state)
+        else:
+            data = _extract_agent_data(final_state)
+
+        # If the graph created interview questions, create a new DB session
+        # so the user can continue the interview via session_id
+        new_session_id: Optional[str] = None
+        if (
+            not active_session_id
+            and final_state.get("interview_questions")
+            and final_state.get("intent") in ("interview_practice", "interview_start")
+        ):
+            new_session_id = str(uuid.uuid4())
+            try:
+                db.create_interview_session(
+                    user_id=request.user_id,
+                    session_id=new_session_id,
+                    role=extra_kwargs.get("interview_role", "Software Engineer"),
+                    level=extra_kwargs.get("interview_level", "mid"),
+                )
+                db.update_interview_session(
+                    session_id=new_session_id,
+                    questions=final_state["interview_questions"],
+                )
+            except Exception as db_err:
+                logger.warning("Failed to create interview session from /chat: %s", db_err)
+                new_session_id = None
+
+        return ChatResponse(
+            response=final_state.get("response", ""),
+            intent=final_state.get("intent", "unknown"),
+            confidence=final_state.get("confidence", 0.0),
+            agents_used=final_state.get("agents_used", []),
+            session_id=final_state.get("session_id", ""),
+            processing_time=final_state.get("processing_time", 0.0),
+            error=final_state.get("error_message"),
+            data=data,
+            interview_session_id=active_session_id or new_session_id,
+        )
+
+    except Exception as e:
+        logger.error("Chat endpoint failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
+# ── LangGraph-powered variants of structured endpoints ──────────────────
+
+def _run_graph(user_query: str, user_id: int = 1, **kwargs) -> Dict[str, Any]:
+    """Convenience wrapper around _workflow.process_query."""
+    return _workflow.process_query(
+        user_query=user_query,
+        user_id=user_id,
+        **kwargs,
+    )
 
 if __name__ == "__main__":
     port = int(os.getenv("API_PORT", 8000))
