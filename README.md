@@ -194,27 +194,47 @@ AI-Job-Application-Coach/
 ## 📚 API Endpoints
 
 ### Resume Analysis
-- `POST /resume` - Analyze resume and get feedback
-- `POST /resume/audit` - Request detailed background analysis
+- `POST /resume` — Analyse resume and get structured feedback
+- `POST /resume/improve` — Concrete improvement suggestions with rewritten bullets
+- `POST /resume/audit` — Dispatch async multi-step audit (returns 202 + task ID)
 
 ### Interview Practice
-- `POST /interview/start` - Start interview session
-- `POST /interview/answer` - Submit answer and get feedback
+- `POST /interview/start` — Start mock-interview session
+- `POST /interview/answer` — Submit answer and get STAR evaluation
+- `GET  /interview/questions/{title}` — Generate questions without a session
+- `POST /interview/report` — Dispatch async performance report
 
 ### Job Search
-- `POST /jobs/search` - Search for job opportunities
+- `POST /jobs/search` — Search with geocoding + LLM results
+- `GET  /jobs/location/{city}` — Geocode city + nearby companies
+- `POST /jobs/match` — Profile-scored job matching
 
 ### Career Advice  
-- `POST /ask` - Ask career-related questions
+- `POST /ask` — RAG-powered career Q&A
 
 ### Application Tracking
-- `GET /applications` - List job applications
-- `POST /applications` - Create new application
-- `PUT /applications/{id}` - Update application status
+- `GET    /applications` — List applications (optional `?status=` filter)
+- `POST   /applications` — Create new application
+- `PUT    /applications/{id}` — Update with status-workflow validation
+- `DELETE /applications/{id}` — Delete application
+- `GET    /applications/follow-ups` — Overdue follow-up reminders
+- `POST   /applications/batch-update` — Dispatch async stale/overdue check
+
+### Unified Chat
+- `POST /chat` — Natural-language endpoint routed through LangGraph
+
+### Async Tasks
+- `GET /tasks/{task_id}/status` — Poll Celery task progress/result
+- `GET /result/{task_id}` — Legacy alias
+
+### User & Memory
+- `GET  /user/{id}/profile` — User profile data
+- `GET  /user/{id}/context` — Conversation context for agents
+- `GET  /user/{id}/insights` — Analytical conversation patterns
 
 ### System
-- `GET /health` - Health check
-- `GET /result/{task_id}` - Get async task results
+- `GET /health` — Subsystem health (database + Redis)
+- `GET /docs` — Interactive Swagger UI
 
 ---
 
@@ -260,30 +280,76 @@ curl -X POST http://localhost:8000/ask \
 - [x] LangGraph workflow foundation
 - [x] Environment configuration
 
-### 🚧 Phase 2: Agents (Next)
-- [ ] Resume analysis agent with LLM integration
-- [ ] Interview agent with question generation
-- [ ] Knowledge agent with RAG implementation
-- [ ] Memory agent with database operations
-- [ ] Job search agent with external APIs
+### ✅ Phase 2: Agents (Completed)
+- [x] Resume analysis agent with LLM integration
+- [x] Interview agent with question generation & STAR evaluation
+- [x] Knowledge agent with RAG implementation
+- [x] Memory agent with DB persistence & LLM summarization
+- [x] Job search agent with geocoding & LLM results
 
-### 📋 Upcoming Phases
-- **Phase 3**: Multi-agent orchestration and communication
-- **Phase 4**: Async processing and production features
-- **Phase 5**: Evaluation, optimization, and documentation
+### ✅ Phase 3: Orchestration (Completed)
+- [x] Router agent with LLM intent classification
+- [x] LangGraph StateGraph workflow (6 nodes)
+- [x] Cross-agent communication & state sharing
+- [x] Unified `/chat` endpoint  
+- [x] 83 tests passing
+
+### ✅ Phase 4: Deployment & Async (Completed)
+- [x] Docker containerisation (MySQL, Redis, ChromaDB, app, Celery worker)
+- [x] Production config via Pydantic BaseSettings
+- [x] Structured logging with per-request correlation IDs
+- [x] Security middleware (API key auth, rate limiting, input validation)
+- [x] Complete application tracker CRUD with status workflow
+- [x] Celery infrastructure with Redis broker
+- [x] Async resume audit (multi-step Celery task with progress)
+- [x] Background interview reports & batch application checks
+- [x] Global exception handler & graceful degradation
+- [x] Enhanced health check with subsystem reporting
+
+### 📋 Phase 5: Evaluation & Polish (Upcoming)
+- [ ] Evaluation framework and metrics
+- [ ] Prompt optimisation & A/B testing
+- [ ] Comprehensive error handling refinement
+- [ ] Final documentation and demo preparation
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Framework**: LangChain, LangGraph
-- **API**: FastAPI, Uvicorn
+- **Framework**: LangChain 0.2, LangGraph
+- **API**: FastAPI 0.104, Uvicorn
 - **Database**: MySQL 8.0 
-- **Vector DB**: ChromaDB
+- **Vector DB**: ChromaDB 0.4
 - **LLM**: OpenAI GPT-4o-mini
-- **Cache/Queue**: Redis (for Celery)
+- **Cache/Queue**: Redis 7 + Celery 5.3
+- **Security**: API-key auth, rate limiting, input validation
 - **Containers**: Docker, Docker Compose
-- **Testing**: pytest
+- **Testing**: pytest (83+ tests)
+
+### Celery Workers (Async Tasks)
+
+To enable async features (resume audit, interview reports):
+
+```bash
+# Start a Celery worker (requires Redis running)
+celery -A app.celery_worker worker --loglevel=info
+
+# Or via Docker Compose (starts automatically)
+docker compose up celery_worker
+```
+
+### Security Configuration
+
+```bash
+# In .env — set API_KEY to enable authentication
+API_KEY=your-secret-key
+
+# Rate limiting (requests per minute per IP)
+RATE_LIMIT_PER_MINUTE=60
+```
+
+When `API_KEY` is unset (default), authentication is bypassed for development.
+Public paths (`/health`, `/docs`, `/openapi.json`, `/redoc`) are always accessible.
 
 ---
 
@@ -391,4 +457,4 @@ wmic OS get TotalVisibleMemorySize,FreePhysicalMemory /format:table  # Windows
 
 ---
 
-**🎯 Current Status**: Foundation phase complete, ready for agent implementation!
+**🎯 Current Status**: Phases 1–4 complete — ready for Phase 5 evaluation & polish!

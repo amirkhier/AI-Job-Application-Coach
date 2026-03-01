@@ -30,6 +30,8 @@ unstructured==0.14.4
 
 # Utilities
 python-dotenv==1.0.1
+pydantic-settings>=2.0
+python-json-logger>=2.0
 
 # Development & Testing
 pytest==7.4.0
