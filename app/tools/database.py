@@ -281,6 +281,35 @@ class DatabaseManager:
         result = self.execute_update(query, params)
         return result is not None and result > 0
 
+    def get_application_by_id(self, application_id: int) -> Optional[Dict]:
+        """Fetch a single application by primary key."""
+        query = "SELECT * FROM applications WHERE id = %s"
+        results = self.execute_query(query, (application_id,))
+        return results[0] if results else None
+
+    def update_application(self, application_id: int, **fields) -> bool:
+        """Update arbitrary fields on an application (status, notes, follow_up_date, job_url)."""
+        allowed = {"status", "notes", "follow_up_date", "job_url", "company_name", "position_title"}
+        updates = []
+        params = []
+        for key, value in fields.items():
+            if key in allowed and value is not None:
+                updates.append(f"{key} = %s")
+                params.append(value)
+        if not updates:
+            return False
+        updates.append("updated_at = CURRENT_TIMESTAMP")
+        query = f"UPDATE applications SET {', '.join(updates)} WHERE id = %s"
+        params.append(application_id)
+        result = self.execute_update(query, tuple(params))
+        return result is not None and result > 0
+
+    def delete_application(self, application_id: int) -> bool:
+        """Hard-delete an application row."""
+        query = "DELETE FROM applications WHERE id = %s"
+        result = self.execute_update(query, (application_id,))
+        return result is not None and result > 0
+
 
 # Global database instance
 db = DatabaseManager()

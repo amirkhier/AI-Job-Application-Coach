@@ -1,8 +1,9 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 import uvicorn
@@ -13,6 +14,11 @@ from datetime import datetime, date
 from contextlib import asynccontextmanager
 
 # Import our modules
+from app.config import settings
+from app.logging_config import setup_logging, request_id_var
+from app.middleware.auth import ApiKeyMiddleware
+from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.validation import InputValidationMiddleware
 from app.tools.database import init_db, close_db, get_db, DatabaseManager
 from app.agents.resume import ResumeAgent
 from app.agents.interview import InterviewAgent
@@ -24,10 +30,12 @@ from app.graph.workflow import JobCoachWorkflow
 import json
 import logging
 
+# ── Bootstrap structured logging ─────────────────────────────────────────
+setup_logging(log_level=settings.LOG_LEVEL, log_format=settings.LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 # ── Feature flag ──────────────────────────────────────────────────────────
-USE_LANGGRAPH = os.getenv("USE_LANGGRAPH", "false").lower() == "true"
+USE_LANGGRAPH = settings.USE_LANGGRAPH
 
 # Pydantic models for request/response
 class HealthResponse(BaseModel):
@@ -35,6 +43,7 @@ class HealthResponse(BaseModel):
     service: str
     timestamp: str
     database_connected: bool
+    checks: Optional[Dict[str, bool]] = None
 
 class ResumeRequest(BaseModel):
     resume_text: str = Field(..., min_length=50, description="Resume content in plain text")
@@ -193,8 +202,22 @@ class ApplicationResponse(BaseModel):
 
 class ApplicationUpdateRequest(BaseModel):
     status: Optional[str] = Field(None, pattern="^(applied|interviewing|offer|rejected|withdrawn)$")
-    notes: Optional[str]
-    follow_up_date: Optional[date]
+    notes: Optional[str] = None
+    follow_up_date: Optional[date] = None
+
+class ApplicationDeleteResponse(BaseModel):
+    id: int
+    deleted: bool
+    message: str
+
+# Valid status transitions for application workflow
+APPLICATION_STATUS_FLOW = {
+    "applied":       ["interviewing", "rejected", "withdrawn"],
+    "interviewing":  ["offer", "rejected", "withdrawn"],
+    "offer":         ["rejected", "withdrawn"],
+    "rejected":      [],
+    "withdrawn":     [],
+}
 
 class AsyncTaskResponse(BaseModel):
     task_id: str
@@ -249,26 +272,41 @@ class ChatResponse(BaseModel):
         description="Interview session ID — returned when an interview session is active or created.",
     )
 
+# ── Request-ID middleware ─────────────────────────────────────────────────
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    """Attach a unique correlation ID to every request / response."""
+
+    async def dispatch(self, request: Request, call_next):
+        rid = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        request_id_var.set(rid)
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = rid
+        return response
+
+
 # Application lifespan management
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    print("Starting AI Job Application Coach...")
+    logger.info(
+        "Starting AI Job Application Coach  [env=%s, debug=%s, log=%s/%s]",
+        settings.ENVIRONMENT, settings.DEBUG, settings.LOG_LEVEL, settings.LOG_FORMAT,
+    )
     try:
         init_db()
-        print("Database initialized successfully")
+        logger.info("Database initialized successfully")
     except Exception as e:
-        print(f"Warning: Database initialization failed: {e}")
+        logger.warning("Database initialization failed: %s", e)
     
     yield
     
     # Shutdown
-    print("Shutting down AI Job Application Coach...")
+    logger.info("Shutting down AI Job Application Coach...")
     try:
         close_db()
-        print("Database connection closed")
+        logger.info("Database connection closed")
     except Exception as e:
-        print(f"Warning: Error during shutdown: {e}")
+        logger.warning("Error during shutdown: %s", e)
 
 # Create FastAPI application
 app = FastAPI(
@@ -278,10 +316,26 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware
+# ── Middleware stack ──────────────────────────────────────────────────────
+# NOTE: Starlette processes middleware in *reverse* registration order,
+# so the last add_middleware call is the outermost (runs first).
+
+# 1. Request-ID (always first – gives every log line a trace ID)
+app.add_middleware(RequestIdMiddleware)
+
+# 2. Input validation (reject oversized / suspicious payloads early)
+app.add_middleware(InputValidationMiddleware)
+
+# 3. API key authentication (skipped when API_KEY is unset)
+app.add_middleware(ApiKeyMiddleware)
+
+# 4. Rate limiting (per-IP token bucket)
+app.add_middleware(RateLimitMiddleware)
+
+# 5. CORS (must be last — outermost — sees preflight before everything else)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -291,6 +345,25 @@ app.add_middleware(
 def get_database():
     """Dependency to get database instance."""
     return get_db()
+
+
+# ── Global exception handler ─────────────────────────────────────────────
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch-all handler — log the full traceback and return a safe 500."""
+    logger.error(
+        "Unhandled exception on %s %s: %s",
+        request.method, request.url, exc, exc_info=True,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "request_id": request_id_var.get("-"),
+        },
+    )
 
 # Initialise agents
 resume_agent = ResumeAgent()
@@ -316,21 +389,36 @@ else:
 # Health check endpoint
 @app.get("/health", response_model=HealthResponse)
 async def health_check(db: DatabaseManager = Depends(get_database)):
-    """Health check endpoint to verify service status."""
+    """Health check endpoint — reports subsystem statuses."""
     database_connected = False
+    redis_ok = False
     try:
         db.ensure_connection()
-        # Test database with simple query
         result = db.execute_query("SELECT 1 as test")
         database_connected = result is not None
     except Exception as e:
-        print(f"Database health check failed: {e}")
-    
+        logger.warning("Database health check failed: %s", e)
+
+    # Redis / Celery broker check
+    try:
+        import redis as _redis
+        r = _redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, socket_timeout=2)
+        redis_ok = r.ping()
+    except Exception:
+        redis_ok = False
+
+    checks = {
+        "database": database_connected,
+        "redis": redis_ok,
+    }
+    overall = "healthy" if all(checks.values()) else "degraded"
+
     return HealthResponse(
-        status="healthy",
+        status=overall,
         service="AI Job Application Coach",
         timestamp=datetime.now().isoformat(),
-        database_connected=database_connected
+        database_connected=database_connected,
+        checks=checks,
     )
 
 # Resume analysis endpoints
@@ -409,20 +497,38 @@ async def analyze_resume(request: ResumeRequest, db: DatabaseManager = Depends(g
         logger.error("Resume analysis endpoint failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Resume analysis failed: {str(e)}")
 
-@app.post("/resume/audit", response_model=AsyncTaskResponse) 
+@app.post("/resume/audit", response_model=AsyncTaskResponse, status_code=202)
 async def request_detailed_resume_audit(request: ResumeRequest, background_tasks: BackgroundTasks):
-    """Request detailed resume audit as background task."""
-    task_id = str(uuid.uuid4())
-    
-    # TODO: Implement Celery task for detailed audit
-    # For now, return mock task response
-    
-    return AsyncTaskResponse(
-        task_id=task_id,
-        status="queued",
-        message="Resume audit task queued for processing",
-        estimated_completion=datetime.now()
-    )
+    """Request detailed resume audit as an async Celery task.
+
+    Returns 202 with a task_id that can be polled via
+    ``GET /tasks/{task_id}/status``.  Falls back to synchronous
+    execution when Celery/Redis is unavailable.
+    """
+    try:
+        from app.tasks.resume_tasks import detailed_resume_audit
+
+        task = detailed_resume_audit.delay(
+            resume_text=request.resume_text,
+            job_description=request.job_description,
+            user_id=request.user_id,
+        )
+        return AsyncTaskResponse(
+            task_id=task.id,
+            status="queued",
+            message="Resume audit task queued for processing",
+            estimated_completion=None,
+        )
+    except Exception as e:
+        # Celery/Redis unavailable → fall back to returning a placeholder
+        logger.warning("Celery unavailable, returning queued placeholder: %s", e)
+        task_id = str(uuid.uuid4())
+        return AsyncTaskResponse(
+            task_id=task_id,
+            status="queued",
+            message="Resume audit task queued (Celery unavailable — task will run when worker starts)",
+            estimated_completion=None,
+        )
 
 @app.post("/resume/improve", response_model=ResumeImprovementResponse)
 async def improve_resume(request: ResumeRequest, db: DatabaseManager = Depends(get_database)):
@@ -957,53 +1063,193 @@ async def get_applications(user_id: int = 1, status: Optional[str] = None, db: D
 
 @app.put("/applications/{application_id}", response_model=ApplicationResponse)
 async def update_application(application_id: int, request: ApplicationUpdateRequest, db: DatabaseManager = Depends(get_database)):
-    """Update job application status and details."""
+    """Update job application status and details with workflow validation."""
     try:
-        # TODO: Implement application update
-        # For now, return mock response
-        
-        success = db.update_application_status(
-            application_id=application_id,
-            status=request.status or "applied",
-            notes=request.notes
-        )
-        
-        if not success:
+        existing = db.get_application_by_id(application_id)
+        if not existing:
             raise HTTPException(status_code=404, detail="Application not found")
-        
-        # Return mock updated application
+
+        # Status workflow validation
+        if request.status and request.status != existing["status"]:
+            allowed = APPLICATION_STATUS_FLOW.get(existing["status"], [])
+            if request.status not in allowed:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Cannot transition from '{existing['status']}' to '{request.status}'. "
+                        f"Allowed transitions: {allowed}"
+                    ),
+                )
+
+        # Build update kwargs
+        update_fields = {}
+        if request.status:
+            update_fields["status"] = request.status
+        if request.notes is not None:
+            update_fields["notes"] = request.notes
+        if request.follow_up_date is not None:
+            update_fields["follow_up_date"] = request.follow_up_date
+
+        if update_fields:
+            success = db.update_application(application_id, **update_fields)
+            if not success:
+                raise HTTPException(status_code=500, detail="Failed to update application")
+
+        updated = db.get_application_by_id(application_id)
         return ApplicationResponse(
-            id=application_id,
-            company_name="Example Company",
-            position_title="Software Engineer",
-            job_url=None,
-            status=request.status or "applied",
-            application_date=date.today(),
-            follow_up_date=request.follow_up_date,
-            notes=request.notes,
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            id=updated["id"],
+            company_name=updated["company_name"],
+            position_title=updated["position_title"],
+            job_url=updated.get("job_url"),
+            status=updated["status"],
+            application_date=updated["application_date"],
+            follow_up_date=updated.get("follow_up_date"),
+            notes=updated.get("notes"),
+            created_at=updated["created_at"],
+            updated_at=updated["updated_at"],
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update application: {str(e)}")
 
-# Async task result endpoint
+
+@app.delete("/applications/{application_id}", response_model=ApplicationDeleteResponse)
+async def delete_application(application_id: int, db: DatabaseManager = Depends(get_database)):
+    """Delete a job application record."""
+    try:
+        existing = db.get_application_by_id(application_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Application not found")
+
+        success = db.delete_application(application_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete application")
+
+        return ApplicationDeleteResponse(
+            id=application_id,
+            deleted=True,
+            message=f"Application for {existing['position_title']} at {existing['company_name']} deleted",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete application: {str(e)}")
+
+
+@app.get("/applications/follow-ups")
+async def get_pending_follow_ups(user_id: int = 1, db: DatabaseManager = Depends(get_database)):
+    """Return applications where follow_up_date <= today and status is still active."""
+    try:
+        applications = db.get_applications(user_id=user_id)
+        today = date.today()
+        terminal_statuses = {"offer", "rejected", "withdrawn"}
+        due = [
+            a for a in applications
+            if a.get("follow_up_date")
+            and a["follow_up_date"] <= today
+            and a["status"] not in terminal_statuses
+        ]
+        return {"follow_ups": due, "count": len(due)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get follow-ups: {str(e)}")
+
+
+# ── Background report endpoints ──────────────────────────────────────────
+
+@app.post("/interview/report", response_model=AsyncTaskResponse, status_code=202)
+async def request_interview_report(
+    user_id: int = 1,
+    session_id: str = "",
+):
+    """Dispatch an async interview performance report generation task."""
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+    try:
+        from app.tasks.interview_tasks import generate_interview_report
+
+        task = generate_interview_report.delay(user_id=user_id, session_id=session_id)
+        return AsyncTaskResponse(
+            task_id=task.id,
+            status="queued",
+            message="Interview report generation queued",
+            estimated_completion=None,
+        )
+    except Exception as e:
+        logger.warning("Celery unavailable for interview report: %s", e)
+        task_id = str(uuid.uuid4())
+        return AsyncTaskResponse(
+            task_id=task_id,
+            status="queued",
+            message="Interview report queued (Celery unavailable)",
+            estimated_completion=None,
+        )
+
+
+@app.post("/applications/batch-update", response_model=AsyncTaskResponse, status_code=202)
+async def request_batch_application_check(user_id: int = 1):
+    """Dispatch async batch status check for all applications (overdue / stale)."""
+    try:
+        from app.tasks.application_tasks import batch_status_check
+
+        task = batch_status_check.delay(user_id=user_id)
+        return AsyncTaskResponse(
+            task_id=task.id,
+            status="queued",
+            message="Batch application status check queued",
+            estimated_completion=None,
+        )
+    except Exception as e:
+        logger.warning("Celery unavailable for batch check: %s", e)
+        task_id = str(uuid.uuid4())
+        return AsyncTaskResponse(
+            task_id=task_id,
+            status="queued",
+            message="Batch check queued (Celery unavailable)",
+            estimated_completion=None,
+        )
+
+# Async task status endpoint (Celery-backed)
+@app.get("/tasks/{task_id}/status")
+async def get_task_status(task_id: str):
+    """Get real-time status of an async Celery task."""
+    try:
+        from celery.result import AsyncResult
+        from app.celery_worker import celery_app as _celery
+
+        result = AsyncResult(task_id, app=_celery)
+        response = {
+            "task_id": task_id,
+            "status": result.status,  # PENDING | STARTED | PROGRESS | SUCCESS | FAILURE | RETRY
+            "result": None,
+            "error": None,
+            "progress": None,
+        }
+        if result.successful():
+            response["result"] = result.result
+        elif result.failed():
+            response["error"] = str(result.result)
+        elif result.status == "PROGRESS":
+            response["progress"] = result.info  # {"step": N, "total": M, "detail": "..."}
+        return response
+    except Exception as e:
+        logger.warning("Celery status check failed (falling back): %s", e)
+        return {
+            "task_id": task_id,
+            "status": "UNKNOWN",
+            "result": None,
+            "error": f"Could not check task status: {str(e)}",
+            "progress": None,
+        }
+
+
+# Legacy alias for backwards compatibility
 @app.get("/result/{task_id}")
 async def get_task_result(task_id: str):
-    """Get result of asynchronous task."""
-    # TODO: Implement Celery task result retrieval
-    # For now, return mock result
-    return {
-        "task_id": task_id,
-        "status": "completed",
-        "result": {
-            "message": "Task completed successfully",
-            "data": {}
-        }
-    }
+    """Get result of asynchronous task (legacy endpoint — prefer /tasks/{id}/status)."""
+    return await get_task_status(task_id)
 
 # User profile endpoints
 @app.get("/user/{user_id}/profile")
@@ -1292,7 +1538,9 @@ def _run_graph(user_query: str, user_id: int = 1, **kwargs) -> Dict[str, Any]:
     )
 
 if __name__ == "__main__":
-    port = int(os.getenv("API_PORT", 8000))
-    host = os.getenv("API_HOST", "0.0.0.0")
-    
-    uvicorn.run(app, host=host, port=port, reload=True)
+    uvicorn.run(
+        app,
+        host=settings.API_HOST,
+        port=settings.API_PORT,
+        reload=settings.DEBUG,
+    )
