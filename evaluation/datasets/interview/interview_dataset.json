@@ -1,0 +1,242 @@
+[
+  {
+    "id": "interview_001",
+    "description": "Generate questions for senior backend engineer",
+    "input": {"role": "Backend Engineer", "level": "senior", "count": 5},
+    "expected": {
+      "question_count": 5,
+      "dimensions": {
+        "question_relevance": {"min_score": 7.0, "notes": "Should be appropriate for senior backend"},
+        "difficulty_match": {"min_score": 6.0, "notes": "Should be senior-level difficulty"}
+      }
+    },
+    "tags": ["positive", "generation", "senior"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "interview_002",
+    "description": "Generate questions for junior frontend developer",
+    "input": {"role": "Frontend Developer", "level": "junior", "count": 3},
+    "expected": {
+      "question_count": 3,
+      "dimensions": {
+        "question_relevance": {"min_score": 7.0, "notes": "Should be frontend-specific"},
+        "difficulty_match": {"min_score": 6.0, "notes": "Should not be too advanced"}
+      }
+    },
+    "tags": ["positive", "generation", "junior"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "interview_003",
+    "description": "Evaluate strong behavioral answer",
+    "input": {
+      "question": {
+        "id": "q1",
+        "question": "Tell me about a time you had to debug a complex production issue.",
+        "type": "behavioral",
+        "difficulty": "medium",
+        "key_points": ["Systematic debugging", "Root cause analysis", "Team collaboration", "Lessons learned"]
+      },
+      "answer": "At CyberTech, our payment processing service started failing intermittently during peak hours. I led the investigation by first checking our monitoring dashboards in Grafana, which showed memory spikes correlating with failures. I narrowed it down to a connection pool leak in our PostgreSQL adapter — connections weren't being released after timeouts. I implemented connection lifecycle management with proper context managers, added circuit breakers, and set up alerts. The fix reduced error rates from 2% to 0.01%. I then documented the incident and created a runbook for the team.",
+      "role": "Backend Engineer",
+      "level": "senior"
+    },
+    "expected": {
+      "dimensions": {
+        "evaluation_fairness": {"min_score": 7.0, "notes": "Strong STAR answer should score well"},
+        "feedback_quality": {"min_score": 6.0, "notes": "Should provide specific constructive feedback"}
+      },
+      "score_range": [7.0, 9.5]
+    },
+    "tags": ["positive", "evaluation", "strong_answer"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "interview_004",
+    "description": "Evaluate weak/vague answer",
+    "input": {
+      "question": {
+        "id": "q1",
+        "question": "Tell me about a time you had to debug a complex production issue.",
+        "type": "behavioral",
+        "difficulty": "medium",
+        "key_points": ["Systematic debugging", "Root cause analysis", "Team collaboration", "Lessons learned"]
+      },
+      "answer": "I fixed a bug once. It was hard but I figured it out.",
+      "role": "Backend Engineer",
+      "level": "mid"
+    },
+    "expected": {
+      "dimensions": {
+        "evaluation_fairness": {"min_score": 6.0, "notes": "Weak answer should score low but not zero"},
+        "feedback_quality": {"min_score": 7.0, "notes": "Should provide specific improvement suggestions"}
+      },
+      "score_range": [2.0, 5.0]
+    },
+    "tags": ["positive", "evaluation", "weak_answer"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "interview_005",
+    "description": "Generate questions for data engineer at lead level",
+    "input": {"role": "Data Engineer", "level": "lead", "count": 5},
+    "expected": {
+      "question_count": 5,
+      "dimensions": {
+        "question_relevance": {"min_score": 7.0, "notes": "Data engineering + leadership"},
+        "difficulty_match": {"min_score": 7.0, "notes": "Lead-level complexity expected"}
+      }
+    },
+    "tags": ["positive", "generation", "lead"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "interview_006",
+    "description": "Evaluate medium-quality technical answer",
+    "input": {
+      "question": {
+        "id": "q2",
+        "question": "How would you design a URL shortener service?",
+        "type": "technical",
+        "difficulty": "medium",
+        "key_points": ["Hashing strategy", "Database design", "Scalability", "Redirect performance"]
+      },
+      "answer": "I would use a hash function to generate short codes. Store the mapping in a database with the original URL. When someone accesses the short URL, look it up and redirect. For scalability, you could add caching with Redis.",
+      "role": "Backend Engineer",
+      "level": "mid"
+    },
+    "expected": {
+      "dimensions": {
+        "evaluation_fairness": {"min_score": 6.0, "notes": "Covers basics but lacks depth"},
+        "feedback_quality": {"min_score": 6.0, "notes": "Should note missing scalability details"}
+      },
+      "score_range": [4.5, 7.0]
+    },
+    "tags": ["positive", "evaluation", "medium_answer"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "interview_007",
+    "description": "Empty answer edge case",
+    "input": {
+      "question": {
+        "id": "q1",
+        "question": "Tell me about yourself.",
+        "type": "behavioral",
+        "difficulty": "easy",
+        "key_points": ["Background", "Motivation", "Relevance"]
+      },
+      "answer": "",
+      "role": "Software Engineer",
+      "level": "mid"
+    },
+    "expected": {
+      "dimensions": {
+        "evaluation_fairness": {"min_score": 3.0, "notes": "Should handle empty gracefully"},
+        "feedback_quality": {"min_score": 3.0, "notes": "Should note that no answer was provided"}
+      },
+      "score_range": [0.0, 2.0]
+    },
+    "tags": ["negative", "edge_case"],
+    "difficulty": "edge"
+  },
+  {
+    "id": "interview_008",
+    "description": "Generate minimum questions (count=1)",
+    "input": {"role": "QA Engineer", "level": "mid", "count": 1},
+    "expected": {
+      "question_count": 1,
+      "dimensions": {
+        "question_relevance": {"min_score": 6.0, "notes": "Should be QA-specific"}
+      }
+    },
+    "tags": ["positive", "generation", "boundary"],
+    "difficulty": "edge"
+  },
+  {
+    "id": "interview_009",
+    "description": "Evaluate answer for wrong role context",
+    "input": {
+      "question": {
+        "id": "q5",
+        "question": "How do you handle disagreements with your product manager?",
+        "type": "behavioral",
+        "difficulty": "medium",
+        "key_points": ["Communication", "Compromise", "Data-driven decisions", "Professionalism"]
+      },
+      "answer": "I always try to bring data to the discussion. Last time, I ran an A/B test that showed my proposed approach would reduce page load time by 2 seconds. We agreed to try my approach for a sprint. When the results were positive, it became the default. When my ideas don't work out, I accept it and learn.",
+      "role": "Frontend Developer",
+      "level": "senior"
+    },
+    "expected": {
+      "dimensions": {
+        "evaluation_fairness": {"min_score": 7.0, "notes": "Good answer with data-driven approach"},
+        "feedback_quality": {"min_score": 6.0, "notes": "Should praise data-driven approach"}
+      },
+      "score_range": [6.5, 9.0]
+    },
+    "tags": ["positive", "evaluation", "strong_answer"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "interview_010",
+    "description": "Generate questions for unusual role",
+    "input": {"role": "Machine Learning Engineer", "level": "senior", "count": 5},
+    "expected": {
+      "question_count": 5,
+      "dimensions": {
+        "question_relevance": {"min_score": 6.0, "notes": "Should include ML-specific questions"}
+      }
+    },
+    "tags": ["positive", "generation", "specialized"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "interview_011",
+    "description": "Evaluate overly long rambling answer",
+    "input": {
+      "question": {
+        "id": "q3",
+        "question": "What is your greatest strength?",
+        "type": "behavioral",
+        "difficulty": "easy",
+        "key_points": ["Self-awareness", "Relevance to role", "Example"]
+      },
+      "answer": "Well that's a great question. I think my greatest strength is probably that I'm a really hard worker. I always come to work on time and I stay late when needed. Also I'm good with people. My colleagues like me. I also know some programming languages. I've been coding since I was young. My parents got me a computer when I was 10. That was a long time ago though. Anyway I think being hardworking is my main strength. Also I'm very detail-oriented. And I communicate well. And I'm good at problem solving. And I'm a fast learner. Did I mention I'm a team player? I think those are my strengths.",
+      "role": "Software Engineer",
+      "level": "junior"
+    },
+    "expected": {
+      "dimensions": {
+        "evaluation_fairness": {"min_score": 5.0, "notes": "Rambling but has some content"},
+        "feedback_quality": {"min_score": 6.0, "notes": "Should note need for conciseness"}
+      },
+      "score_range": [3.0, 5.5]
+    },
+    "tags": ["positive", "evaluation", "rambling"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "interview_012",
+    "description": "Session summary evaluation",
+    "input": {
+      "session_data": {
+        "role": "Backend Engineer",
+        "level": "senior",
+        "questions_count": 3,
+        "scores": [8.0, 6.5, 7.0],
+        "strengths": ["technical depth", "clear communication"],
+        "weaknesses": ["time management in answers", "could use more examples"]
+      }
+    },
+    "expected": {
+      "dimensions": {
+        "summary_accuracy": {"min_score": 6.0, "notes": "Should reflect actual scores and patterns"},
+        "recommendation_quality": {"min_score": 6.0, "notes": "Should be actionable"}
+      }
+    },
+    "tags": ["positive", "summary"],
+    "difficulty": "standard"
+  }
+]

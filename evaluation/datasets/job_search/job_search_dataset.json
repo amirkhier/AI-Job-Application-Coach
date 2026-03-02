@@ -1,0 +1,219 @@
+[
+  {
+    "id": "job_search_001",
+    "description": "Standard backend search with location",
+    "input": {"role": "Backend Engineer", "location": "San Francisco, CA", "experience_level": "senior"},
+    "expected": {
+      "result_count_min": 1,
+      "dimensions": {
+        "result_relevance": {"min_score": 7.0, "notes": "All results should be backend-related"},
+        "match_accuracy": {"min_score": 6.0, "notes": "Should match seniority and location"}
+      }
+    },
+    "tags": ["positive", "standard"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "job_search_002",
+    "description": "Remote job search",
+    "input": {"role": "Frontend Developer", "location": "Remote", "experience_level": "mid"},
+    "expected": {
+      "result_count_min": 1,
+      "dimensions": {
+        "result_relevance": {"min_score": 6.0},
+        "match_accuracy": {"min_score": 6.0}
+      }
+    },
+    "tags": ["positive", "remote"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "job_search_003",
+    "description": "Search with resume matching",
+    "input": {
+      "role": "Data Scientist",
+      "location": "New York, NY",
+      "experience_level": "senior",
+      "resume_text": "PhD in Statistics, 5 years at Google building ML models, Python/TensorFlow/PyTorch, published 3 papers on NLP"
+    },
+    "expected": {
+      "result_count_min": 1,
+      "dimensions": {
+        "result_relevance": {"min_score": 7.0, "notes": "Should be DS/ML roles"},
+        "match_accuracy": {"min_score": 7.0, "notes": "Should match PhD-level skills"}
+      },
+      "should_include_match_score": true
+    },
+    "tags": ["positive", "matching", "strong_resume"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "job_search_004",
+    "description": "Entry-level search",
+    "input": {"role": "Software Engineer", "location": "Austin, TX", "experience_level": "entry"},
+    "expected": {
+      "result_count_min": 1,
+      "dimensions": {
+        "result_relevance": {"min_score": 6.0},
+        "match_accuracy": {"min_score": 5.0, "notes": "Entry-level roles should not require 5+ years"}
+      }
+    },
+    "tags": ["positive", "entry_level"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "job_search_005",
+    "description": "Niche role search",
+    "input": {"role": "Blockchain Developer", "location": "Miami, FL", "experience_level": "mid"},
+    "expected": {
+      "dimensions": {
+        "result_relevance": {"min_score": 5.0, "notes": "Niche role, fewer results acceptable"}
+      }
+    },
+    "tags": ["positive", "niche"],
+    "difficulty": "complex"
+  },
+  {
+    "id": "job_search_006",
+    "description": "Matching with career changer resume",
+    "input": {
+      "role": "Software Engineer",
+      "location": "Remote",
+      "experience_level": "junior",
+      "resume_text": "Former high school math teacher, completed coding bootcamp, built 3 portfolio projects in React/Node.js, strong communication skills"
+    },
+    "expected": {
+      "dimensions": {
+        "result_relevance": {"min_score": 6.0},
+        "match_accuracy": {"min_score": 5.0, "notes": "Should account for bootcamp background"}
+      },
+      "should_include_match_score": true
+    },
+    "tags": ["positive", "matching", "career_changer"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "job_search_007",
+    "description": "Empty role field",
+    "input": {"role": "", "location": "Seattle, WA", "experience_level": "mid"},
+    "expected": {
+      "dimensions": {
+        "result_relevance": {"min_score": 3.0, "notes": "Should handle empty role gracefully"}
+      }
+    },
+    "tags": ["negative", "edge_case"],
+    "difficulty": "edge"
+  },
+  {
+    "id": "job_search_008",
+    "description": "International location",
+    "input": {"role": "DevOps Engineer", "location": "London, UK", "experience_level": "senior"},
+    "expected": {
+      "dimensions": {
+        "result_relevance": {"min_score": 6.0},
+        "match_accuracy": {"min_score": 5.0, "notes": "International search may have fewer results"}
+      }
+    },
+    "tags": ["positive", "international"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "job_search_009",
+    "description": "Non-tech role in tech context",
+    "input": {"role": "Technical Product Manager", "location": "San Jose, CA", "experience_level": "senior"},
+    "expected": {
+      "dimensions": {
+        "result_relevance": {"min_score": 6.0, "notes": "Should find PM roles, not engineering"}
+      }
+    },
+    "tags": ["positive", "non_eng"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "job_search_010",
+    "description": "Overqualified search",
+    "input": {
+      "role": "Junior Developer",
+      "location": "Chicago, IL",
+      "experience_level": "junior",
+      "resume_text": "15 years experience as VP of Engineering, managed 50+ engineers, built systems processing 1M requests/sec"
+    },
+    "expected": {
+      "dimensions": {
+        "result_relevance": {"min_score": 5.0},
+        "match_accuracy": {"min_score": 4.0, "notes": "Should flag mismatch between resume and search level"}
+      },
+      "should_include_match_score": true
+    },
+    "tags": ["positive", "matching", "overqualified"],
+    "difficulty": "complex"
+  },
+  {
+    "id": "job_search_011",
+    "description": "Security/adversarial role input",
+    "input": {"role": "'; DROP TABLE jobs; --", "location": "Remote", "experience_level": "mid"},
+    "expected": {
+      "dimensions": {
+        "result_relevance": {"min_score": 2.0, "notes": "Should handle safely without error"}
+      }
+    },
+    "tags": ["negative", "adversarial", "security"],
+    "difficulty": "edge"
+  },
+  {
+    "id": "job_search_012",
+    "description": "Multiple skills in role description",
+    "input": {"role": "Full Stack Developer (React, Python, AWS)", "location": "Denver, CO", "experience_level": "mid"},
+    "expected": {
+      "dimensions": {
+        "result_relevance": {"min_score": 6.0, "notes": "Should parse multi-skill role"}
+      }
+    },
+    "tags": ["positive", "multi_skill"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "job_search_013",
+    "description": "Matching with minimal resume",
+    "input": {
+      "role": "Software Engineer",
+      "location": "Remote",
+      "experience_level": "mid",
+      "resume_text": "Python developer"
+    },
+    "expected": {
+      "dimensions": {
+        "result_relevance": {"min_score": 5.0},
+        "match_accuracy": {"min_score": 4.0, "notes": "Minimal resume limits matching quality"}
+      },
+      "should_include_match_score": true
+    },
+    "tags": ["positive", "matching", "minimal"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "job_search_014",
+    "description": "CTO/executive level search",
+    "input": {"role": "CTO", "location": "San Francisco, CA", "experience_level": "executive"},
+    "expected": {
+      "dimensions": {
+        "result_relevance": {"min_score": 5.0, "notes": "Executive roles are fewer"},
+        "match_accuracy": {"min_score": 5.0}
+      }
+    },
+    "tags": ["positive", "executive"],
+    "difficulty": "complex"
+  },
+  {
+    "id": "job_search_015",
+    "description": "Internship search",
+    "input": {"role": "Software Engineering Intern", "location": "Remote", "experience_level": "intern"},
+    "expected": {
+      "dimensions": {
+        "result_relevance": {"min_score": 5.0, "notes": "Should find intern-level positions"}
+      }
+    },
+    "tags": ["positive", "intern"],
+    "difficulty": "standard"
+  }
+]

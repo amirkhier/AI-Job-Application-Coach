@@ -1,0 +1,352 @@
+[
+  {
+    "id": "router_001",
+    "description": "Clear resume analysis request",
+    "input": {"user_query": "Can you review my resume and tell me what to improve?", "has_active_session": false},
+    "expected": {"intent": "resume_analysis", "min_confidence": 0.8},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_002",
+    "description": "Clear interview practice request",
+    "input": {"user_query": "I want to practice for a backend engineer interview", "has_active_session": false},
+    "expected": {"intent": "interview_practice", "min_confidence": 0.8},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_003",
+    "description": "Job search request",
+    "input": {"user_query": "Find me Python developer jobs in Tel Aviv", "has_active_session": false},
+    "expected": {"intent": "job_search", "min_confidence": 0.8},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_004",
+    "description": "Career advice / knowledge question",
+    "input": {"user_query": "What salary should I expect as a senior engineer in Israel?", "has_active_session": false},
+    "expected": {"intent": "career_advice", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_005",
+    "description": "Resume improvement request",
+    "input": {"user_query": "Help me rewrite my resume bullets to be more impactful", "has_active_session": false},
+    "expected": {"intent": "resume_improvement", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_006",
+    "description": "Application tracking request",
+    "input": {"user_query": "I applied to Google yesterday, can you track that?", "has_active_session": false},
+    "expected": {"intent": "application_tracking", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_007",
+    "description": "General question / greeting",
+    "input": {"user_query": "Hello, what can you do?", "has_active_session": false},
+    "expected": {"intent": "general_question", "min_confidence": 0.5},
+    "tags": ["positive", "general"]
+  },
+  {
+    "id": "router_008",
+    "description": "Ambiguous — could be resume or interview",
+    "input": {"user_query": "I need help preparing for my next opportunity", "has_active_session": false},
+    "expected": {"intent": "general_question", "min_confidence": 0.4, "acceptable_intents": ["career_advice", "general_question", "resume_analysis"]},
+    "tags": ["ambiguous"]
+  },
+  {
+    "id": "router_009",
+    "description": "Active interview session — should override",
+    "input": {"user_query": "My answer is that I used agile methodology to manage the project efficiently", "has_active_session": true},
+    "expected": {"intent": "interview_answer", "min_confidence": 0.7},
+    "tags": ["positive", "session_override"]
+  },
+  {
+    "id": "router_010",
+    "description": "Break out of interview session",
+    "input": {"user_query": "Stop the interview, I want to look at job listings instead", "has_active_session": true},
+    "expected": {"intent": "job_search", "min_confidence": 0.6, "acceptable_intents": ["job_search"]},
+    "tags": ["positive", "session_breakout"]
+  },
+  {
+    "id": "router_011",
+    "description": "Salary negotiation question",
+    "input": {"user_query": "How do I negotiate a better salary package?", "has_active_session": false},
+    "expected": {"intent": "career_advice", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_012",
+    "description": "Technical interview question type",
+    "input": {"user_query": "Can you quiz me on system design topics?", "has_active_session": false},
+    "expected": {"intent": "interview_practice", "min_confidence": 0.7, "acceptable_intents": ["interview_practice", "interview_start"]},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_013",
+    "description": "Empty query",
+    "input": {"user_query": "", "has_active_session": false},
+    "expected": {"intent": "unknown", "min_confidence": 0.0, "acceptable_intents": ["unknown", "general_question"]},
+    "tags": ["negative", "edge_case"]
+  },
+  {
+    "id": "router_014",
+    "description": "Very short query",
+    "input": {"user_query": "hi", "has_active_session": false},
+    "expected": {"intent": "general_question", "min_confidence": 0.3, "acceptable_intents": ["general_question", "unknown"]},
+    "tags": ["edge_case"]
+  },
+  {
+    "id": "router_015",
+    "description": "Mixed intent — resume + jobs",
+    "input": {"user_query": "Analyze my resume and then find matching jobs", "has_active_session": false},
+    "expected": {"intent": "resume_analysis", "min_confidence": 0.5, "acceptable_intents": ["resume_analysis", "job_search"]},
+    "tags": ["ambiguous", "multi_intent"]
+  },
+  {
+    "id": "router_016",
+    "description": "ATS keyword question (knowledge)",
+    "input": {"user_query": "What are the best keywords to include for ATS systems?", "has_active_session": false},
+    "expected": {"intent": "career_advice", "min_confidence": 0.6, "acceptable_intents": ["career_advice", "resume_analysis"]},
+    "tags": ["ambiguous"]
+  },
+  {
+    "id": "router_017",
+    "description": "Job search with specific role",
+    "input": {"user_query": "I'm looking for DevOps positions in Haifa with Kubernetes experience", "has_active_session": false},
+    "expected": {"intent": "job_search", "min_confidence": 0.8},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_018",
+    "description": "Interview answer during active session",
+    "input": {"user_query": "I would approach this problem by first breaking it into smaller components and then implementing each with proper testing", "has_active_session": true},
+    "expected": {"intent": "interview_answer", "min_confidence": 0.7},
+    "tags": ["positive", "session_override"]
+  },
+  {
+    "id": "router_019",
+    "description": "Request to start mock interview explicitly",
+    "input": {"user_query": "Start a mock interview for a senior data engineer position", "has_active_session": false},
+    "expected": {"intent": "interview_start", "min_confidence": 0.8, "acceptable_intents": ["interview_start", "interview_practice"]},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_020",
+    "description": "Hebrew tech market question",
+    "input": {"user_query": "What is the tech job market like in Israel right now?", "has_active_session": false},
+    "expected": {"intent": "career_advice", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_021",
+    "description": "Adversarial — SQL injection in query",
+    "input": {"user_query": "'; DROP TABLE users; --", "has_active_session": false},
+    "expected": {"intent": "unknown", "min_confidence": 0.0, "acceptable_intents": ["unknown", "general_question"]},
+    "tags": ["negative", "adversarial"]
+  },
+  {
+    "id": "router_022",
+    "description": "Resume improvement phrased as feedback request",
+    "input": {"user_query": "What's wrong with my CV and how can I make it better?", "has_active_session": false},
+    "expected": {"intent": "resume_analysis", "min_confidence": 0.7, "acceptable_intents": ["resume_analysis", "resume_improvement"]},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_023",
+    "description": "Application status inquiry",
+    "input": {"user_query": "What's the status of my applications? Any follow-ups needed?", "has_active_session": false},
+    "expected": {"intent": "application_tracking", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_024",
+    "description": "Remote work question (knowledge)",
+    "input": {"user_query": "What are the pros and cons of remote work in tech?", "has_active_session": false},
+    "expected": {"intent": "career_advice", "min_confidence": 0.7, "acceptable_intents": ["career_advice", "general_question"]},
+    "tags": ["positive"]
+  },
+  {
+    "id": "router_025",
+    "description": "Very long query with multiple intents embedded",
+    "input": {"user_query": "I've been a developer for 5 years, I want to update my resume, practice for Google interviews, and also search for remote senior engineer positions in Tel Aviv. Additionally, I'd like to know about salary ranges and track my applications.", "has_active_session": false},
+    "expected": {"intent": "resume_analysis", "min_confidence": 0.4, "acceptable_intents": ["resume_analysis", "general_question", "career_advice"]},
+    "tags": ["edge_case", "multi_intent"]
+  },
+  {
+    "id": "router_026",
+    "description": "Explicit new interview while in session",
+    "input": {"user_query": "Actually, let me search for jobs instead", "has_active_session": true},
+    "expected": {"intent": "job_search", "min_confidence": 0.6},
+    "tags": ["positive", "session_breakout"]
+  },
+  {
+    "id": "router_027",
+    "description": "Thank you / end of conversation",
+    "input": {"user_query": "Thanks, that's all I needed!", "has_active_session": false},
+    "expected": {"intent": "general_question", "min_confidence": 0.3, "acceptable_intents": ["general_question", "unknown"]},
+    "tags": ["positive", "general"]
+  },
+  {
+    "id": "router_028",
+    "description": "Cover letter request (maps to resume domain)",
+    "input": {"user_query": "Can you help me write a cover letter for this position?", "has_active_session": false},
+    "expected": {"intent": "resume_improvement", "min_confidence": 0.5, "acceptable_intents": ["resume_improvement", "resume_analysis", "career_advice"]},
+    "tags": ["ambiguous"]
+  },
+  {
+    "id": "router_029",
+    "description": "Behavioral interview prep",
+    "input": {"user_query": "I need to prepare STAR method answers for behavioral questions", "has_active_session": false},
+    "expected": {"intent": "interview_practice", "min_confidence": 0.7, "acceptable_intents": ["interview_practice", "career_advice"]},
+    "tags": ["positive"]
+  },
+  {
+    "id": "router_030",
+    "description": "Networking advice (knowledge)",
+    "input": {"user_query": "How do I build my professional network in Israeli tech?", "has_active_session": false},
+    "expected": {"intent": "career_advice", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_031",
+    "description": "Numbers only (edge case)",
+    "input": {"user_query": "12345", "has_active_session": false},
+    "expected": {"intent": "unknown", "min_confidence": 0.0, "acceptable_intents": ["unknown", "general_question"]},
+    "tags": ["edge_case"]
+  },
+  {
+    "id": "router_032",
+    "description": "Question about the system itself",
+    "input": {"user_query": "What agents do you have? What can this system do?", "has_active_session": false},
+    "expected": {"intent": "general_question", "min_confidence": 0.5},
+    "tags": ["positive", "general"]
+  },
+  {
+    "id": "router_033",
+    "description": "LinkedIn optimization (resume domain)",
+    "input": {"user_query": "Help me optimize my LinkedIn profile summary", "has_active_session": false},
+    "expected": {"intent": "resume_improvement", "min_confidence": 0.5, "acceptable_intents": ["resume_improvement", "resume_analysis", "career_advice"]},
+    "tags": ["ambiguous"]
+  },
+  {
+    "id": "router_034",
+    "description": "Specific company job search",
+    "input": {"user_query": "Are there any openings at Microsoft Tel Aviv?", "has_active_session": false},
+    "expected": {"intent": "job_search", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_035",
+    "description": "Emotional/frustrated user",
+    "input": {"user_query": "I've been rejected from 20 companies and I don't know what I'm doing wrong", "has_active_session": false},
+    "expected": {"intent": "career_advice", "min_confidence": 0.5, "acceptable_intents": ["career_advice", "resume_analysis", "general_question"]},
+    "tags": ["ambiguous", "emotional"]
+  },
+  {
+    "id": "router_036",
+    "description": "Technical question disguised as interview",
+    "input": {"user_query": "Explain how a B-tree index works in PostgreSQL", "has_active_session": false},
+    "expected": {"intent": "career_advice", "min_confidence": 0.4, "acceptable_intents": ["career_advice", "general_question", "interview_practice"]},
+    "tags": ["ambiguous"]
+  },
+  {
+    "id": "router_037",
+    "description": "Follow-up on previous resume analysis",
+    "input": {"user_query": "Based on your analysis, rewrite my experience section", "has_active_session": false},
+    "expected": {"intent": "resume_improvement", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_038",
+    "description": "Relocating — job search",
+    "input": {"user_query": "I'm moving to Berlin, what's the tech scene like and are there jobs?", "has_active_session": false},
+    "expected": {"intent": "job_search", "min_confidence": 0.5, "acceptable_intents": ["job_search", "career_advice"]},
+    "tags": ["ambiguous"]
+  },
+  {
+    "id": "router_039",
+    "description": "Portfolio review (adjacent to resume)",
+    "input": {"user_query": "Can you review my GitHub portfolio and suggest improvements?", "has_active_session": false},
+    "expected": {"intent": "resume_analysis", "min_confidence": 0.4, "acceptable_intents": ["resume_analysis", "resume_improvement", "career_advice"]},
+    "tags": ["ambiguous"]
+  },
+  {
+    "id": "router_040",
+    "description": "Startup advice question",
+    "input": {"user_query": "Should I join a startup or a big company as a mid-level developer?", "has_active_session": false},
+    "expected": {"intent": "career_advice", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_041",
+    "description": "Whitespace only query",
+    "input": {"user_query": "   ", "has_active_session": false},
+    "expected": {"intent": "unknown", "min_confidence": 0.0, "acceptable_intents": ["unknown", "general_question"]},
+    "tags": ["negative", "edge_case"]
+  },
+  {
+    "id": "router_042",
+    "description": "Interview for specific company",
+    "input": {"user_query": "Prepare me for a Google system design interview", "has_active_session": false},
+    "expected": {"intent": "interview_practice", "min_confidence": 0.8, "acceptable_intents": ["interview_practice", "interview_start"]},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_043",
+    "description": "Track new application",
+    "input": {"user_query": "Add a new application: I applied to Wix for Frontend Developer yesterday", "has_active_session": false},
+    "expected": {"intent": "application_tracking", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_044",
+    "description": "Resume score request",
+    "input": {"user_query": "What score would you give my resume out of 10?", "has_active_session": false},
+    "expected": {"intent": "resume_analysis", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_045",
+    "description": "Industry transition advice",
+    "input": {"user_query": "I'm transitioning from finance to tech, what skills should I learn?", "has_active_session": false},
+    "expected": {"intent": "career_advice", "min_confidence": 0.7},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_046",
+    "description": "Repeated single character",
+    "input": {"user_query": "aaaaaaaaaa", "has_active_session": false},
+    "expected": {"intent": "unknown", "min_confidence": 0.0, "acceptable_intents": ["unknown", "general_question"]},
+    "tags": ["edge_case"]
+  },
+  {
+    "id": "router_047",
+    "description": "Implicit interview continuation",
+    "input": {"user_query": "Well in that situation I collaborated with my team lead to prioritize the most critical bug fixes first", "has_active_session": true},
+    "expected": {"intent": "interview_answer", "min_confidence": 0.7},
+    "tags": ["positive", "session_override"]
+  },
+  {
+    "id": "router_048",
+    "description": "Request for interview tips (knowledge, not practice)",
+    "input": {"user_query": "What are the top tips for acing a technical interview?", "has_active_session": false},
+    "expected": {"intent": "career_advice", "min_confidence": 0.6, "acceptable_intents": ["career_advice", "interview_practice"]},
+    "tags": ["ambiguous"]
+  },
+  {
+    "id": "router_049",
+    "description": "Remote jobs search",
+    "input": {"user_query": "Show me remote Python backend jobs with good salaries", "has_active_session": false},
+    "expected": {"intent": "job_search", "min_confidence": 0.8},
+    "tags": ["positive", "clear_intent"]
+  },
+  {
+    "id": "router_050",
+    "description": "Complex multi-sentence with primary resume intent",
+    "input": {"user_query": "I have 10 years of experience as a Java developer. My current resume is two pages long but I feel like it's not getting through ATS systems. Can you analyze it and suggest how to optimize the keywords?", "has_active_session": false},
+    "expected": {"intent": "resume_analysis", "min_confidence": 0.7, "acceptable_intents": ["resume_analysis", "resume_improvement"]},
+    "tags": ["positive", "complex"]
+  }
+]

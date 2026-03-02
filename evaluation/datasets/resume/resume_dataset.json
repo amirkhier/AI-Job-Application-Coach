@@ -1,0 +1,402 @@
+[
+  {
+    "id": "resume_001",
+    "description": "Strong senior backend engineer resume with matching JD",
+    "input": {
+      "resume_text": "Jane Smith\nSenior Backend Engineer | jane.smith@email.com | Tel Aviv, Israel\n\nSUMMARY\nExperienced backend engineer with 7 years building scalable distributed systems.\nProficient in Python, Go, and cloud-native architectures.\n\nEXPERIENCE\nSenior Backend Engineer — CyberTech Ltd. (2021–Present)\n- Architected event-driven microservices platform processing 1M events/day using Kafka\n- Led migration from AWS to hybrid cloud, reducing infrastructure costs by 35%\n- Mentored team of 4 junior developers, established code review standards\n\nBackend Developer — DataFlow Startup (2018–2021)\n- Built REST APIs in Python/FastAPI handling 50K concurrent users\n- Implemented CI/CD with GitHub Actions, cutting deployment time by 70%\n- Designed PostgreSQL sharding strategy for multi-region SaaS product\n\nJunior Developer — WebSolutions (2016–2018)\n- Developed internal tools using Python and Django\n- Created automated testing framework achieving 90% code coverage\n\nSKILLS\nPython, Go, FastAPI, Django, AWS, GCP, Docker, Kubernetes, PostgreSQL, Redis, Kafka, gRPC\n\nEDUCATION\nB.Sc. Computer Science — Technion (2016)",
+      "job_description": "Senior Backend Engineer — FinTech Startup (Tel Aviv)\n\nRequirements:\n- 5+ years backend development\n- Strong Python and distributed systems\n- Event-driven architecture (Kafka, RabbitMQ)\n- SQL databases (PostgreSQL preferred)\n- Cloud infrastructure (AWS/GCP)\n- CI/CD pipeline experience\n\nNice to have:\n- Go or Rust experience\n- Kubernetes"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 7.0, "notes": "Should identify Python/Kafka/distributed systems as strengths"},
+        "completeness": {"min_score": 7.0, "notes": "All sections present and analyzed"},
+        "actionability": {"min_score": 6.0, "notes": "Recommendations should be specific"},
+        "ats_relevance": {"min_score": 7.0, "notes": "Keywords match JD well"}
+      },
+      "must_contain": ["overall_score", "strengths", "weaknesses", "recommendations", "ats_compatibility", "keyword_analysis"],
+      "score_range": [7.0, 9.5]
+    },
+    "tags": ["positive", "senior", "backend", "with_jd"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "resume_002",
+    "description": "Junior developer resume — minimal experience, no JD",
+    "input": {
+      "resume_text": "John Doe\nSoftware Developer\njohn@email.com\n\nEXPERIENCE\nIntern — Small Company (2024, 3 months)\n- Fixed bugs in a Python web app\n- Wrote unit tests\n\nSKILLS\nPython, HTML, CSS\n\nEDUCATION\nB.Sc. Computer Science — University (2024)",
+      "job_description": ""
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 5.0, "notes": "Should identify limited experience as weakness"},
+        "completeness": {"min_score": 5.0, "notes": "Missing summary and contact details noted"},
+        "actionability": {"min_score": 6.0, "notes": "Should suggest adding projects, quantifying achievements"},
+        "ats_relevance": {"min_score": 3.0, "notes": "No JD so limited ATS analysis"}
+      },
+      "must_contain": ["overall_score", "strengths", "weaknesses", "recommendations"],
+      "score_range": [3.0, 6.0]
+    },
+    "tags": ["positive", "junior", "no_jd"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "resume_003",
+    "description": "Empty resume — error handling test",
+    "input": {
+      "resume_text": "",
+      "job_description": ""
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 0.0, "notes": "Error or very low score expected"},
+        "completeness": {"min_score": 0.0, "notes": "Nothing to assess"},
+        "actionability": {"min_score": 0.0, "notes": "Fallback response"},
+        "ats_relevance": {"min_score": 0.0, "notes": "N/A"}
+      },
+      "must_contain": ["overall_score"],
+      "score_range": [0.0, 3.0]
+    },
+    "tags": ["negative", "edge_case"],
+    "difficulty": "edge"
+  },
+  {
+    "id": "resume_004",
+    "description": "Minimal resume — name and title only",
+    "input": {
+      "resume_text": "John Doe\nSoftware Developer\njohn@email.com",
+      "job_description": ""
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 2.0, "notes": "Should recognize extreme brevity"},
+        "completeness": {"min_score": 2.0, "notes": "Missing experience, skills, education"},
+        "actionability": {"min_score": 4.0, "notes": "Should suggest adding all major sections"},
+        "ats_relevance": {"min_score": 1.0, "notes": "No keywords to analyze"}
+      },
+      "must_contain": ["overall_score", "weaknesses"],
+      "score_range": [1.0, 4.0]
+    },
+    "tags": ["edge_case", "minimal"],
+    "difficulty": "edge"
+  },
+  {
+    "id": "resume_005",
+    "description": "Mid-level data scientist resume with mismatched JD (backend role)",
+    "input": {
+      "resume_text": "Sarah Cohen\nData Scientist | sarah@email.com | Haifa, Israel\n\nSUMMARY\n4 years of experience in machine learning, statistical analysis, and data engineering.\n\nEXPERIENCE\nData Scientist — AI Solutions (2021–Present)\n- Built ML pipeline for customer churn prediction, improving retention by 15%\n- Developed NLP models for Hebrew text classification using BERT\n- Created dashboards in Tableau for executive stakeholders\n\nJunior Data Analyst — TechCorp (2019–2021)\n- Performed A/B test analysis for marketing campaigns\n- Automated ETL pipelines using Python and Airflow\n\nSKILLS\nPython, TensorFlow, PyTorch, SQL, Tableau, Airflow, Spark, R\n\nEDUCATION\nM.Sc. Statistics — Hebrew University (2019)\nB.Sc. Mathematics — Hebrew University (2017)",
+      "job_description": "Senior Backend Engineer — FinTech Startup\nRequirements: 5+ years backend, Python, Kafka, PostgreSQL, AWS, CI/CD"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 6.0, "notes": "Should identify mismatch between DS profile and backend role"},
+        "completeness": {"min_score": 6.0, "notes": "Resume itself is complete"},
+        "actionability": {"min_score": 6.0, "notes": "Should suggest highlighting transferable skills"},
+        "ats_relevance": {"min_score": 4.0, "notes": "Many backend keywords missing"}
+      },
+      "must_contain": ["overall_score", "keyword_analysis"],
+      "score_range": [4.0, 7.0]
+    },
+    "tags": ["positive", "mid", "data_science", "mismatched_jd", "with_jd"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "resume_006",
+    "description": "Career changer — teacher to developer",
+    "input": {
+      "resume_text": "Rachel Levi\nCareer Changer | rachel@email.com\n\nSUMMARY\nFormer high school math teacher transitioning to software development.\nCompleted a 6-month full-stack bootcamp.\n\nEXPERIENCE\nMath Teacher — Public High School (2015–2024)\n- Taught calculus and statistics to 120 students annually\n- Developed curriculum using data-driven methods\n- Led school technology committee\n\nFull-Stack Bootcamp Graduate (2024)\n- Built 3 full-stack projects: React + Node.js + PostgreSQL\n- Completed Agile/Scrum workshops\n- Final project: Job board application with CI/CD\n\nSKILLS\nJavaScript, React, Node.js, Python, PostgreSQL, Git, HTML/CSS\n\nEDUCATION\nFull-Stack Web Development Bootcamp — Coding Academy (2024)\nB.Ed. Mathematics — Tel Aviv University (2015)",
+      "job_description": "Junior Full-Stack Developer\nRequirements: React, Node.js, SQL, Git\nNice to have: CI/CD, Agile"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 6.0, "notes": "Should frame teaching experience as transferable"},
+        "completeness": {"min_score": 5.0, "notes": "Structure is reasonable for career changer"},
+        "actionability": {"min_score": 7.0, "notes": "Should advise on how to present career change"},
+        "ats_relevance": {"min_score": 5.0, "notes": "Bootcamp skills match JD requirements"}
+      },
+      "must_contain": ["overall_score", "strengths", "recommendations"],
+      "score_range": [4.5, 7.5]
+    },
+    "tags": ["positive", "junior", "career_changer", "with_jd"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "resume_007",
+    "description": "Overqualified executive resume for mid-level role",
+    "input": {
+      "resume_text": "David Mizrahi\nVP Engineering | david.m@email.com | Tel Aviv\n\nSUMMARY\n20+ years in technology leadership. Managed engineering orgs of 200+ people.\n\nEXPERIENCE\nVP Engineering — MegaCorp (2018–Present)\n- Oversaw 200+ engineers across 15 teams, $50M annual budget\n- Drove migration to microservices saving $10M/year\n- Established SRE practice reducing downtime by 99.5%\n\nDirector of Engineering — BigTech (2012–2018)\n- Built engineering team from 20 to 80 engineers\n- Led SOC2 compliance initiative\n\nSenior Engineer — StartupX (2005–2012)\n- Full-stack development in Java, Python\n- Architected distributed processing system\n\nSKILLS\nEngineering Leadership, Architecture, Java, Python, AWS, Team Building, P&L Management\n\nEDUCATION\nMBA — INSEAD (2012)\nB.Sc. Computer Science — Technion (2005)",
+      "job_description": "Mid-Level Python Developer\nRequirements: 3-5 years Python, Django or FastAPI, PostgreSQL"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 6.0, "notes": "Should note overqualification"},
+        "completeness": {"min_score": 7.0, "notes": "Resume is thorough"},
+        "actionability": {"min_score": 5.0, "notes": "Should advise on tailoring for role level"},
+        "ats_relevance": {"min_score": 4.0, "notes": "Leadership keywords don't match mid-level JD"}
+      },
+      "must_contain": ["overall_score", "recommendations"],
+      "score_range": [4.0, 7.0]
+    },
+    "tags": ["positive", "senior", "overqualified", "with_jd"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "resume_008",
+    "description": "Resume with formatting noise (symbols, weird whitespace)",
+    "input": {
+      "resume_text": "***  ALEX B.  ***\n:::: Full Stack Developer ::::\nemail: alex@mail.com  |  phone: +972-50-1234567  |  LinkedIn: linkedin.com/in/alex\n\n------- ABOUT ME -------\nI am a passionate developer who loves coding!!!\n\n------- WORK -------\n>> Developer @ Company (2020-now)\n  ** Did some stuff with React and Node\n  ** Made a website\n  ** Used databases\n\n------- SKILLS -------\nJavaScript *** React *** Node.js *** MongoDB *** \"Docker\"\n\n------- SCHOOL -------\nCS Degree somewhere (2020)",
+      "job_description": ""
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 4.0, "notes": "Should parse despite formatting noise"},
+        "completeness": {"min_score": 4.0, "notes": "Content is sparse but present"},
+        "actionability": {"min_score": 6.0, "notes": "Should recommend professional formatting"},
+        "ats_relevance": {"min_score": 3.0, "notes": "Formatting symbols will hurt ATS"}
+      },
+      "must_contain": ["overall_score", "weaknesses"],
+      "score_range": [2.5, 5.5]
+    },
+    "tags": ["edge_case", "formatting_noise", "no_jd"],
+    "difficulty": "edge"
+  },
+  {
+    "id": "resume_009",
+    "description": "Perfect 10 resume — extremely strong candidate",
+    "input": {
+      "resume_text": "Yael Goldberg\nStaff Software Engineer | yael@email.com | Tel Aviv, Israel | github.com/yael\n\nSUMMARY\n12 years building high-scale distributed systems. 3x Google SRE, contributed to open-source infrastructure serving 1B+ users. Speaker at KubeCon and PyCon.\n\nEXPERIENCE\nStaff Engineer — Google (2019–Present)\n- Designed and shipped Spanner query optimizer improvement reducing p99 latency by 40% for 500+ services\n- Led cross-org reliability initiative covering 50+ microservices, achieving 99.999% uptime\n- Authored 15 design docs adopted as org-wide standards; mentored 20+ engineers\n- Open-source maintainer of widely-used gRPC health checking library (10K+ GitHub stars)\n\nSenior SRE — Google (2015–2019)\n- Built automated canary analysis system processing 1M metrics/minute\n- Reduced incident response time by 60% through ML-based alert correlation\n- Published research paper on distributed systems reliability (IEEE)\n\nBackend Engineer — Amazon (2012–2015)\n- Built real-time recommendation engine serving 100M daily requests\n- Designed DynamoDB access patterns for 99.99% availability\n- Implemented end-to-end CI/CD pipeline with zero-downtime deployments\n\nSKILLS\nPython, Go, C++, Java, Kubernetes, Terraform, gRPC, Spanner, BigQuery, Kafka, Redis, PostgreSQL, AWS, GCP, Distributed Systems, System Design, Technical Leadership\n\nEDUCATION\nM.Sc. Computer Science — Stanford University (2012)\nB.Sc. Computer Science — Technion, summa cum laude (2010)\n\nPUBLICATIONS & TALKS\n- 'Reliability at Scale: Lessons from Running 99.999% Systems' — KubeCon 2023\n- 'Distributed Consensus in Practice' — IEEE Transactions on Distributed Systems 2018",
+      "job_description": "Staff Backend Engineer — High-Scale Fintech\nRequirements: 10+ years, distributed systems, Python/Go, Kubernetes, system design"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 8.0, "notes": "Should recognize exceptional candidate"},
+        "completeness": {"min_score": 8.0, "notes": "All sections thorough and quantified"},
+        "actionability": {"min_score": 5.0, "notes": "Minor tweaks at best"},
+        "ats_relevance": {"min_score": 8.0, "notes": "Excellent keyword match"}
+      },
+      "must_contain": ["overall_score", "strengths", "ats_compatibility"],
+      "score_range": [8.5, 10.0]
+    },
+    "tags": ["positive", "senior", "exceptional", "with_jd"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "resume_010",
+    "description": "Non-tech resume — nurse applying to dev role",
+    "input": {
+      "resume_text": "Maria Santos\nRegistered Nurse | maria@email.com\n\nEXPERIENCE\nRegistered Nurse — Tel Aviv Medical Center (2018–Present)\n- Managed patient care for 20+ patients per shift\n- Trained 5 new nurses in ICU procedures\n- Implemented digital charting system for department\n\nSKILLS\nPatient Care, EMR Systems, Team Leadership, Crisis Management\n\nEDUCATION\nB.Sc. Nursing — Tel Aviv University (2018)",
+      "job_description": "Python Backend Developer\nRequirements: Python, Django, REST APIs, PostgreSQL, 2+ years"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 5.0, "notes": "Should identify complete career mismatch"},
+        "completeness": {"min_score": 4.0, "notes": "No relevant tech content"},
+        "actionability": {"min_score": 5.0, "notes": "Should suggest acquiring tech skills first"},
+        "ats_relevance": {"min_score": 1.0, "notes": "Zero keyword overlap"}
+      },
+      "must_contain": ["overall_score", "recommendations"],
+      "score_range": [1.0, 4.0]
+    },
+    "tags": ["edge_case", "career_mismatch", "with_jd"],
+    "difficulty": "edge"
+  },
+  {
+    "id": "resume_011",
+    "description": "Resume with only skills — no experience section",
+    "input": {
+      "resume_text": "Tom Brown\ntom@email.com\n\nSKILLS\nPython, JavaScript, React, Node.js, Docker, AWS, PostgreSQL, MongoDB, Git, CI/CD, Agile, TDD\n\nEDUCATION\nB.Sc. Computer Science — University (2023)\n\nPROJECTS\n- Built a todo app\n- Made a chat application",
+      "job_description": ""
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 5.0, "notes": "Should note missing experience section"},
+        "completeness": {"min_score": 3.0, "notes": "Critical sections missing"},
+        "actionability": {"min_score": 7.0, "notes": "Should recommend adding experience, quantifying projects"},
+        "ats_relevance": {"min_score": 3.0, "notes": "Skills present but no context"}
+      },
+      "must_contain": ["overall_score", "weaknesses", "recommendations"],
+      "score_range": [2.5, 5.5]
+    },
+    "tags": ["edge_case", "junior", "no_experience", "no_jd"],
+    "difficulty": "edge"
+  },
+  {
+    "id": "resume_012",
+    "description": "DevOps engineer resume with infrastructure-heavy JD",
+    "input": {
+      "resume_text": "Amit Sharma\nDevOps Engineer | amit@email.com | Herzliya, Israel\n\nSUMMARY\n6 years of DevOps and cloud infrastructure experience. Expert in Kubernetes, Terraform, and CI/CD automation.\n\nEXPERIENCE\nSenior DevOps Engineer — CloudScale (2021–Present)\n- Managed Kubernetes clusters serving 500+ microservices across 3 regions\n- Reduced deployment failures by 80% through GitOps (ArgoCD + Helm)\n- Implemented infrastructure-as-code with Terraform for 200+ AWS resources\n- Built monitoring stack (Prometheus, Grafana, PagerDuty) with 99.9% alert accuracy\n\nDevOps Engineer — TechStart (2018–2021)\n- Migrated legacy Jenkins to GitHub Actions, reducing build times by 60%\n- Designed multi-account AWS landing zone with SSO and guardrails\n- Automated security scanning in CI pipeline (Snyk, Trivy)\n\nSKILLS\nKubernetes, Terraform, AWS, GCP, Docker, Helm, ArgoCD, Jenkins, GitHub Actions, Prometheus, Grafana, Python, Bash, Linux\n\nEDUCATION\nB.Sc. Information Systems — Ben-Gurion University (2018)\nCKA (Certified Kubernetes Administrator)\nAWS Solutions Architect Professional",
+      "job_description": "Senior DevOps / Platform Engineer\nRequirements: Kubernetes, Terraform, AWS, CI/CD, monitoring, 5+ years\nNice to have: ArgoCD, Helm, Python scripting"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 7.0, "notes": "Strong match should be identified"},
+        "completeness": {"min_score": 7.0, "notes": "All sections with quantified achievements"},
+        "actionability": {"min_score": 5.0, "notes": "Already good, minor improvements"},
+        "ats_relevance": {"min_score": 8.0, "notes": "Excellent keyword overlap with JD"}
+      },
+      "must_contain": ["overall_score", "strengths", "keyword_analysis"],
+      "score_range": [7.5, 9.5]
+    },
+    "tags": ["positive", "senior", "devops", "with_jd"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "resume_013",
+    "description": "Very long resume — 5+ pages of content",
+    "input": {
+      "resume_text": "Long Resume Candidate\nSenior Fullstack | long@email.com\n\nSUMMARY\n15 years of experience across multiple domains including fintech, healthtech, edtech, and e-commerce. Expert in full-stack development with leadership experience.\n\nEXPERIENCE\nPrincipal Engineer — FinCorp (2022–Present)\n- Led platform modernization initiative\n- Managed team of 12 engineers\n- Architected event sourcing system\n- Built real-time fraud detection pipeline\n- Implemented CQRS pattern\n- Designed API gateway\n- Created developer portal\n- Established coding standards\n\nSenior Engineer — HealthTech (2019–2022)\n- Built HIPAA-compliant patient portal\n- Designed microservices architecture\n- Implemented OAuth2/OIDC authentication\n- Created data pipeline for analytics\n- Led infrastructure migration to AWS\n- Mentored 6 junior developers\n\nSenior Developer — EdTech (2016–2019)\n- Built LMS platform serving 100K students\n- Implemented video streaming service\n- Designed assessment engine\n- Created admin dashboard\n- Led mobile app development\n\nDeveloper — E-Commerce (2013–2016)\n- Built product catalog system\n- Implemented payment integration\n- Created recommendation engine\n- Designed inventory management\n\nJunior Developer — Agency (2010–2013)\n- Built client websites\n- Created CMS plugins\n- Wrote documentation\n\nSKILLS\nJavaScript, TypeScript, Python, Java, Go, React, Angular, Vue, Node.js, Express, FastAPI, Django, Spring Boot, PostgreSQL, MongoDB, Redis, Kafka, RabbitMQ, AWS, GCP, Azure, Docker, Kubernetes, Terraform, Jenkins, GitHub Actions, GraphQL, REST, gRPC, OAuth2, SAML, Microservices, Event Sourcing, CQRS, DDD, TDD, Agile, Scrum\n\nEDUCATION\nM.Sc. Computer Science (2010)\nB.Sc. Computer Science (2008)\n\nCERTIFICATIONS\nAWS Solutions Architect Professional\nKubernetes CKAD\nGoogle Cloud Professional\nHashiCorp Terraform Associate",
+      "job_description": ""
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 6.0, "notes": "Should identify breadth of experience"},
+        "completeness": {"min_score": 5.0, "notes": "Too much content, not focused"},
+        "actionability": {"min_score": 6.0, "notes": "Should recommend trimming and focusing"},
+        "ats_relevance": {"min_score": 4.0, "notes": "Too many keywords, diluted"}
+      },
+      "must_contain": ["overall_score", "recommendations"],
+      "score_range": [5.0, 8.0]
+    },
+    "tags": ["edge_case", "senior", "too_long", "no_jd"],
+    "difficulty": "edge"
+  },
+  {
+    "id": "resume_014",
+    "description": "Resume with quantified achievements for PM role",
+    "input": {
+      "resume_text": "Noa Berkowitz\nProduct Manager | noa@email.com | Tel Aviv\n\nSUMMARY\nProduct manager with 5 years driving B2B SaaS products from 0 to $10M ARR.\n\nEXPERIENCE\nSenior PM — SaaSCo (2021–Present)\n- Launched 3 products generating $4M combined ARR in first year\n- Increased user retention by 25% through data-driven feature prioritization\n- Managed roadmap for team of 8 engineers, shipping bi-weekly\n\nPM — TechStartup (2019–2021)\n- Grew DAU from 5K to 50K through user research-driven iterations\n- Reduced churn by 30% by redesigning onboarding flow\n\nSKILLS\nProduct Strategy, User Research, A/B Testing, SQL, Jira, Figma, Data Analysis, Roadmapping\n\nEDUCATION\nMBA — IDC Herzliya (2019)\nB.A. Economics — Tel Aviv University (2017)",
+      "job_description": "Product Manager — Growth\nRequirements:\n- 3+ years PM experience in B2B SaaS\n- Data-driven decision making\n- Experience with growth metrics (DAU, retention, churn)\n- SQL for basic analysis"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 7.0, "notes": "Should recognize strong quantified achievements"},
+        "completeness": {"min_score": 7.0, "notes": "Well-structured for PM role"},
+        "actionability": {"min_score": 5.0, "notes": "Already quite strong"},
+        "ats_relevance": {"min_score": 7.0, "notes": "Good keyword alignment"}
+      },
+      "must_contain": ["overall_score", "strengths"],
+      "score_range": [7.0, 9.0]
+    },
+    "tags": ["positive", "mid", "product_manager", "with_jd"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "resume_015",
+    "description": "Adversarial input — SQL injection attempt in resume",
+    "input": {
+      "resume_text": "Robert'; DROP TABLE users; --\nDeveloper\n\nEXPERIENCE\n<script>alert('xss')</script>\nSELECT * FROM secrets;\n\nSKILLS\nunion select password from users",
+      "job_description": "Developer role"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 1.0, "notes": "Should handle gracefully without error"},
+        "completeness": {"min_score": 1.0, "notes": "Malicious content"},
+        "actionability": {"min_score": 1.0, "notes": "May produce minimal feedback"},
+        "ats_relevance": {"min_score": 1.0, "notes": "N/A"}
+      },
+      "must_contain": ["overall_score"],
+      "score_range": [1.0, 3.0]
+    },
+    "tags": ["negative", "adversarial", "security"],
+    "difficulty": "edge"
+  },
+  {
+    "id": "resume_016",
+    "description": "Fresh graduate with strong projects but no work experience",
+    "input": {
+      "resume_text": "Eli Rosenberg\nNew Graduate | eli@email.com | Beer Sheva\n\nSUMMARY\nRecent CS graduate passionate about backend development. Strong project portfolio.\n\nPROJECTS\nDistributed Chat Application (2024)\n- Built real-time messaging system using Go, gRPC, and Redis\n- Implemented Raft consensus for message ordering\n- 95% test coverage, deployed on AWS ECS\n\nML-Powered Code Review Bot (2024)\n- Python tool using OpenAI API to review pull requests\n- Integrated with GitHub Actions; adopted by 3 student teams\n- Processed 500+ PRs with 4.5/5 user satisfaction\n\nE-Commerce Platform (2023)\n- Full-stack Next.js + PostgreSQL application\n- Stripe payment integration, role-based access\n- 98 Lighthouse performance score\n\nSKILLS\nPython, Go, TypeScript, React, Next.js, PostgreSQL, Redis, Docker, AWS, Git, gRPC\n\nEDUCATION\nB.Sc. Computer Science — Ben-Gurion University (2024)\nGPA: 92/100, Dean's List",
+      "job_description": "Junior Backend Developer\nRequirements: Python or Go, SQL, REST APIs, Git\nNice to have: Docker, AWS, CI/CD"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 6.0, "notes": "Should value strong projects despite no work experience"},
+        "completeness": {"min_score": 5.0, "notes": "No work experience but projects compensate"},
+        "actionability": {"min_score": 6.0, "notes": "Should suggest presenting projects as experience"},
+        "ats_relevance": {"min_score": 6.0, "notes": "Good keyword match for junior role"}
+      },
+      "must_contain": ["overall_score", "strengths", "recommendations"],
+      "score_range": [5.5, 8.0]
+    },
+    "tags": ["positive", "junior", "new_graduate", "projects_only", "with_jd"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "resume_017",
+    "description": "Resume in non-standard format — bullets as paragraphs",
+    "input": {
+      "resume_text": "Daniel K.\nBackend Developer, daniel@email.com\n\nI have been working as a backend developer for about 4 years now. I started at a small company called WebDev Inc where I worked on their API using Python and Flask. I then moved to a bigger company called TechStar where I have been working on microservices using FastAPI and PostgreSQL. I also do some DevOps work with Docker and AWS. In my spare time I contribute to open source projects. I studied computer science at Haifa University and graduated in 2020.",
+      "job_description": "Backend Developer — 3-5 years Python, FastAPI/Django, PostgreSQL, Docker"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 5.0, "notes": "Should extract relevant info from paragraph format"},
+        "completeness": {"min_score": 4.0, "notes": "Content present but poorly structured"},
+        "actionability": {"min_score": 7.0, "notes": "Should recommend proper formatting with bullet points"},
+        "ats_relevance": {"min_score": 4.0, "notes": "Keywords present but hard for ATS to parse"}
+      },
+      "must_contain": ["overall_score", "weaknesses", "recommendations"],
+      "score_range": [3.5, 6.5]
+    },
+    "tags": ["edge_case", "mid", "poor_format", "with_jd"],
+    "difficulty": "edge"
+  },
+  {
+    "id": "resume_018",
+    "description": "Cybersecurity specialist resume",
+    "input": {
+      "resume_text": "Maya Cohen\nSecurity Engineer | maya@email.com | Tel Aviv\n\nSUMMARY\n8 years in cybersecurity with expertise in application security, penetration testing, and security architecture.\n\nEXPERIENCE\nSenior Security Engineer — CyberDefend (2020–Present)\n- Led application security program covering 50+ microservices\n- Discovered and remediated 200+ vulnerabilities, zero critical incidents in 3 years\n- Built automated SAST/DAST pipeline integrated with CI/CD\n- Conducted 30+ penetration tests for enterprise clients\n\nSecurity Analyst — SecureOps (2017–2020)\n- Managed SIEM (Splunk) monitoring 10K+ events/second\n- Performed incident response for 50+ security events\n- Implemented zero-trust network architecture\n\nSKILLS\nPenetration Testing, Application Security, SAST/DAST, Splunk, AWS Security, Kubernetes Security, Python, Go, OWASP, SOC2, ISO 27001\n\nCERTIFICATIONS\nOSCP, CISSP, AWS Security Specialty\n\nEDUCATION\nB.Sc. Computer Science — Technion (2017)",
+      "job_description": "Senior Application Security Engineer\nRequirements: 5+ years security, AppSec, SAST/DAST, CI/CD integration, cloud security\nNice to have: OSCP, penetration testing, Python"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 7.0, "notes": "Should identify strong security profile match"},
+        "completeness": {"min_score": 7.0, "notes": "Well-structured with quantified results"},
+        "actionability": {"min_score": 5.0, "notes": "Strong resume, minor tweaks"},
+        "ats_relevance": {"min_score": 8.0, "notes": "Excellent keyword alignment"}
+      },
+      "must_contain": ["overall_score", "strengths", "keyword_analysis"],
+      "score_range": [7.5, 9.5]
+    },
+    "tags": ["positive", "senior", "cybersecurity", "with_jd"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "resume_019",
+    "description": "Freelancer with many short engagements",
+    "input": {
+      "resume_text": "Liam O'Brien\nFreelance Developer | liam@email.com | Remote\n\nEXPERIENCE\nFreelance Full-Stack Developer (2019–Present)\n- Client A (3 months): Built e-commerce site in Shopify + custom Node.js backend\n- Client B (2 months): React dashboard for analytics startup\n- Client C (4 months): Python ETL pipeline for data company\n- Client D (1 month): WordPress plugin development\n- Client E (6 months): Mobile app in React Native for delivery service\n- Client F (2 months): API integration for CRM system\n- Client G (3 months): Vue.js frontend for SaaS product\n- Client H (1 month): Database optimization for PostgreSQL\n\nSKILLS\nJavaScript, Python, React, Node.js, Vue.js, React Native, PostgreSQL, MongoDB, Shopify, WordPress\n\nEDUCATION\nSelf-taught developer, various online courses and certifications",
+      "job_description": "Mid-Level Backend Developer (Full-time)\nRequirements: Python, FastAPI or Django, PostgreSQL, 3+ years"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 5.0, "notes": "Should identify breadth but lack of depth"},
+        "completeness": {"min_score": 5.0, "notes": "Many engagements but no depth per client"},
+        "actionability": {"min_score": 6.0, "notes": "Should recommend consolidating and highlighting relevant work"},
+        "ats_relevance": {"min_score": 4.0, "notes": "Mixed tech stack, not focused on backend Python"}
+      },
+      "must_contain": ["overall_score", "recommendations"],
+      "score_range": [4.0, 7.0]
+    },
+    "tags": ["positive", "mid", "freelancer", "with_jd"],
+    "difficulty": "standard"
+  },
+  {
+    "id": "resume_020",
+    "description": "Resume with gaps in employment",
+    "input": {
+      "resume_text": "Tamar Levy\nSoftware Developer | tamar@email.com | Ramat Gan\n\nSUMMARY\nSoftware developer with experience in web development seeking to return to tech after a career break.\n\nEXPERIENCE\nSoftware Developer — WebAgency (2016–2018)\n- Built client-facing web applications using React and Node.js\n- Implemented RESTful APIs for 10+ client projects\n- Maintained 95% client satisfaction rating\n\n[Career Break 2018–2023]\n\nFreelance Web Developer (2023–Present)\n- Completed 5 small projects to rebuild skills\n- Updated knowledge: TypeScript, Next.js, Docker\n- Contributing to open source (2 merged PRs)\n\nSKILLS\nJavaScript, TypeScript, React, Next.js, Node.js, Docker, Git\n\nEDUCATION\nB.Sc. Computer Science — Bar-Ilan University (2016)",
+      "job_description": "Frontend Developer\nRequirements: React, TypeScript, 2+ years experience, responsive design"
+    },
+    "expected": {
+      "dimensions": {
+        "accuracy": {"min_score": 5.0, "notes": "Should address the employment gap constructively"},
+        "completeness": {"min_score": 5.0, "notes": "Gap is disclosed which is good"},
+        "actionability": {"min_score": 7.0, "notes": "Should advise on framing the gap positively"},
+        "ats_relevance": {"min_score": 5.0, "notes": "Recent skills match JD"}
+      },
+      "must_contain": ["overall_score", "recommendations"],
+      "score_range": [4.0, 7.0]
+    },
+    "tags": ["positive", "mid", "career_gap", "with_jd"],
+    "difficulty": "standard"
+  }
+]
