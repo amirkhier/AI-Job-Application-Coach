@@ -1,0 +1,9 @@
+{
+  "agent": "resume",
+  "version_a": "v1.0",
+  "version_b": "v1.0",
+  "description": "Baseline self-comparison to validate A/B testing pipeline",
+  "tags_include": ["positive"],
+  "tags_exclude": ["adversarial"],
+  "significance_level": 0.05
+}
