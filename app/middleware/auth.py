@@ -28,7 +28,7 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         # No key configured → dev mode, skip auth entirely
-        if settings.API_KEY is None:
+        if not settings.API_KEY:
             return await call_next(request)
 
         # Public paths are always accessible

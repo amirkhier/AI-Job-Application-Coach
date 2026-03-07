@@ -22,12 +22,15 @@ from starlette.middleware.base import BaseHTTPMiddleware
 logger = logging.getLogger(__name__)
 
 # ── SQL injection pattern detection ──────────────────────────────────────
+# Patterns are intentionally narrow to avoid false positives on resume /
+# cover-letter text that naturally contains words like "select", "update",
+# PDF binary artefacts that contain "--", etc.
 SQL_INJECTION_PATTERNS = [
-    r"(\b(UNION|SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE)\b.*\b(FROM|INTO|TABLE|SET)\b)",
-    r"(--|/\*|\*/)",
-    r"(\bOR\b\s+\d+\s*=\s*\d+)",
-    r"(\bAND\b\s+\d+\s*=\s*\d+)",
+    r"(\b(UNION)\b\s+(ALL\s+)?\b(SELECT)\b)",
     r"(;\s*(DROP|DELETE|UPDATE|INSERT)\b)",
+    r"(\bOR\b\s+1\s*=\s*1)",
+    r'(\bOR\b\s+[\x27"]\s*=\s*[\x27"])',
+    r"(/\*.*\*/)",
 ]
 _COMPILED = [re.compile(p, re.IGNORECASE) for p in SQL_INJECTION_PATTERNS]
 
