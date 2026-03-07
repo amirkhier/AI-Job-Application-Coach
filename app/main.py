@@ -10,6 +10,7 @@ import uvicorn
 import os
 import time
 import uuid
+import asyncio
 from datetime import datetime, date
 from contextlib import asynccontextmanager
 
@@ -183,20 +184,20 @@ class JobSearchResponse(BaseModel):
 class ApplicationCreateRequest(BaseModel):
     company_name: str
     position_title: str
-    job_url: Optional[str]
-    application_date: Optional[date]
-    notes: Optional[str]
+    job_url: Optional[str] = None
+    application_date: Optional[date] = None
+    notes: Optional[str] = None
     user_id: int = Field(1)
 
 class ApplicationResponse(BaseModel):
     id: int
     company_name: str
     position_title: str
-    job_url: Optional[str]
+    job_url: Optional[str] = None
     status: str
     application_date: date
-    follow_up_date: Optional[date]
-    notes: Optional[str]
+    follow_up_date: Optional[date] = None
+    notes: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -407,9 +408,20 @@ async def health_check(db: DatabaseManager = Depends(get_database)):
     except Exception:
         redis_ok = False
 
+    # ChromaDB check
+    chromadb_ok = False
+    try:
+        from app.rag.query import query_knowledge_base
+        # A lightweight query just to verify the collection is accessible
+        result = query_knowledge_base("test", k=1)
+        chromadb_ok = True  # No exception means DB is readable
+    except Exception:
+        chromadb_ok = False
+
     checks = {
         "database": database_connected,
         "redis": redis_ok,
+        "chromadb": chromadb_ok,
     }
     overall = "healthy" if all(checks.values()) else "degraded"
 
@@ -437,7 +449,8 @@ async def analyze_resume(request: ResumeRequest, db: DatabaseManager = Depends(g
             analysis = state.get("resume_analysis") or {}
         else:
             # ── Direct agent path (legacy) ──────────────────────────
-            analysis = resume_agent.analyze_resume(
+            analysis = await asyncio.to_thread(
+                resume_agent.analyze_resume,
                 resume_text=request.resume_text,
                 job_description=request.job_description or "",
             )
@@ -546,7 +559,8 @@ async def improve_resume(request: ResumeRequest, db: DatabaseManager = Depends(g
             improvements = state.get("resume_suggestions") or {}
         else:
             # ── Direct agent path (legacy) ──────────────────────────
-            improvements = resume_agent.suggest_improvements(
+            improvements = await asyncio.to_thread(
+                resume_agent.suggest_improvements,
                 resume_text=request.resume_text,
                 job_description=request.job_description or "",
             )
@@ -611,7 +625,8 @@ async def start_interview_session(request: InterviewStartRequest, db: DatabaseMa
             )
             questions = state.get("interview_questions", [])
         else:
-            questions = interview_agent.generate_questions(
+            questions = await asyncio.to_thread(
+                interview_agent.generate_questions,
                 role=request.role,
                 level=request.level,
                 count=request.question_count,
@@ -681,7 +696,8 @@ async def submit_interview_answer(request: InterviewAnswerRequest, db: DatabaseM
             )
             evaluation = state.get("interview_feedback") or {}
         else:
-            evaluation = interview_agent.evaluate_answer(
+            evaluation = await asyncio.to_thread(
+                interview_agent.evaluate_answer,
                 question=current_q,
                 answer=request.answer,
                 role=role,
@@ -723,7 +739,8 @@ async def submit_interview_answer(request: InterviewAnswerRequest, db: DatabaseM
         else:
             # Generate session summary via Interview Agent
             try:
-                session_summary = interview_agent.generate_session_summary(
+                session_summary = await asyncio.to_thread(
+                    interview_agent.generate_session_summary,
                     questions=questions,
                     answers_with_feedback=answers,
                     role=role,
@@ -814,7 +831,7 @@ async def ask_career_question(request: KnowledgeQueryRequest, db: DatabaseManage
             }
         else:
             # ── Direct agent path (legacy) ──────────────────────────
-            result = knowledge_agent.answer_question(request.query)
+            result = await asyncio.to_thread(knowledge_agent.answer_question, request.query)
 
             # Save conversation with intelligent analysis (non-fatal)
             session_id = str(uuid.uuid4())
@@ -867,7 +884,8 @@ async def search_jobs(request: JobSearchRequest, db: DatabaseManager = Depends(g
             result = {"jobs": raw_jobs, "processing_time": state.get("processing_time", 0.0)}
         else:
             # ── Direct agent path (legacy) ──────────────────────────
-            result = job_search_agent.search_jobs(
+            result = await asyncio.to_thread(
+                job_search_agent.search_jobs,
                 query=request.query,
                 location=request.location,
                 experience_level=request.experience_level,
@@ -948,11 +966,12 @@ async def search_jobs(request: JobSearchRequest, db: DatabaseManager = Depends(g
 async def get_city_info(city: str):
     """Geocode a city and find nearby tech companies/offices."""
     try:
-        location_info = job_search_agent.get_city_center(city)
+        location_info = await asyncio.to_thread(job_search_agent.get_city_center, city)
         nearby: List[Dict[str, Any]] = []
 
         if location_info.get("lat") and location_info.get("lon"):
-            nearby = job_search_agent.find_nearby_offices(
+            nearby = await asyncio.to_thread(
+                job_search_agent.find_nearby_offices,
                 lat=location_info["lat"],
                 lon=location_info["lon"],
                 radius=5000,
@@ -981,7 +1000,8 @@ async def match_jobs_to_profile(
         )
         user_profile = user_context.get("profile", {})
 
-        result = job_search_agent.search_jobs_with_matching(
+        result = await asyncio.to_thread(
+            job_search_agent.search_jobs_with_matching,
             query=request.query,
             location=request.location,
             experience_level=request.experience_level,
@@ -1349,6 +1369,63 @@ async def update_profile_from_conversation(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update profile: {str(e)}")
+
+
+@app.put("/user/{user_id}/profile")
+async def edit_user_profile(
+    user_id: int,
+    request: Request,
+    db: DatabaseManager = Depends(get_database)
+):
+    """Directly edit user profile data (skills, experience, roles, goals)."""
+    try:
+        body = await request.json()
+        
+        # Get current user
+        user = db.get_user(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Merge with existing profile_data
+        current_profile = user.get("profile_data", {}) or {}
+        current_prefs = user.get("preferences", {}) or {}
+        
+        # Update profile_data fields
+        if "skills" in body:
+            current_profile["skills"] = body["skills"]
+        if "experience_level" in body:
+            current_profile["experience_level"] = body["experience_level"]
+        if "experience_years" in body:
+            current_profile["experience_years"] = body["experience_years"]
+        if "name" in body:
+            current_profile["name"] = body["name"]
+        if "career_goals" in body:
+            current_profile["career_goals"] = body["career_goals"]
+        
+        # Update preferences
+        if "target_roles" in body:
+            current_profile["target_roles"] = body["target_roles"]
+            current_prefs["preferred_roles"] = body["target_roles"]
+        if "location" in body:
+            current_prefs["location"] = body["location"]
+        
+        # Save profile_data
+        db.update_user_profile(user_id, current_profile)
+        
+        # Save preferences
+        pref_query = "UPDATE users SET preferences = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s"
+        db.execute_update(pref_query, (json.dumps(current_prefs), user_id))
+        
+        return {
+            "success": True,
+            "profile_data": current_profile,
+            "preferences": current_prefs,
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to edit profile: {str(e)}")
 
 
 # ── Unified chat endpoint (LangGraph-powered) ───────────────────────────

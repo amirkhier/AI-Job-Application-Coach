@@ -56,7 +56,8 @@ class KnowledgeAgent:
                         "2. Reference sources by their names when citing information.\n"
                         "3. Be actionable — give concrete steps, not vague platitudes.\n"
                         "4. Keep the answer focused and well-structured.\n"
-                        "5. If the question is not career-related, politely redirect.\n\n"
+                        "5. If the question is not career-related, politely redirect.\n"
+                        "6. Format the answer field using Markdown (headings, bullet points, numbered lists, bold) for readability. Use \\n for newlines inside the JSON string.\n\n"
                         "Return your response as a JSON object with EXACTLY this schema:\n"
                         "{{\n"
                         '  "answer": "<your detailed answer>",\n'
